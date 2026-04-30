@@ -1,0 +1,1068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="UtilityBills">
+<meta name="theme-color" content="#161b22">
+<meta name="description" content="Utility Bills Manager - Track water and electricity bills">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+<title>⚡ UtilityBills</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:#0d1117;color:#e6edf3;min-height:100vh}
+input,button,select{font-family:inherit}
+/* TOP BAR */
+#topbar{background:#161b22;border-bottom:1px solid #21262d;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+#topbar h1{font-size:1rem;font-weight:700}
+#topbar h1 b{color:#58a6ff}
+#savedTxt{font-size:.7rem;color:#3fb950;opacity:0;transition:.3s}
+#savedTxt.on{opacity:1}
+input[type=month]{background:#0d1117;border:1px solid #30363d;border-radius:6px;padding:5px 9px;color:#e6edf3;font-size:.78rem;font-family:inherit;color-scheme:dark;outline:none}
+/* TABS */
+#tabs{background:#161b22;border-bottom:1px solid #21262d;display:flex}
+.tab{flex:1;border:none;background:none;color:#8b949e;font-family:inherit;font-size:.76rem;font-weight:500;padding:10px 4px;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:.15s}
+.tab.on{color:#58a6ff;font-weight:700;border-bottom-color:#58a6ff}
+.tab span{display:block;font-size:1rem;margin-bottom:2px}
+/* PAGES */
+#content{padding:16px 14px 100px;max-width:860px;margin:0 auto}
+.pg{display:none}.pg.on{display:block}
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:8px 14px;border:none;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer;transition:.15s;outline:none;white-space:nowrap}
+.btn:active{opacity:.7;transform:scale(.97)}
+.b-blue{background:#1f6feb;color:#fff}
+.b-green{background:#238636;color:#fff}
+.b-orange{background:#d29922;color:#fff}
+.b-red{background:rgba(248,81,73,.12);color:#f85149;border:1px solid rgba(248,81,73,.2)}
+.b-ghost{background:transparent;color:#8b949e;border:1px solid #30363d}
+.b-sm{font-size:.7rem;padding:5px 10px}
+.abar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+/* BUILDING CARD */
+.bcard{background:#161b22;border:1px solid #21262d;border-radius:10px;margin-bottom:12px;overflow:hidden}
+.bhdr{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#0d1117;cursor:pointer;user-select:none}
+.bhdr:active{background:#0a0f1a}
+.bleft{display:flex;align-items:center;gap:9px}
+.bnum{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:700}
+.bname{font-weight:700;font-size:.9rem}
+.bmeta{font-size:.65rem;color:#8b949e;margin-top:1px}
+.btotal{font-weight:700;color:#3fb950;font-size:.9rem}
+.chev{color:#484f58;transition:.2s;font-size:.7rem;margin-left:4px}
+.closed .chev{transform:rotate(-90deg)}
+.closed .cbody{display:none}
+.cbody{padding:12px}
+/* ROOM */
+.rcard{border:1px solid #30363d;border-radius:8px;margin-bottom:9px;overflow:hidden}
+.rhdr{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:#161b22;flex-wrap:wrap;gap:7px}
+.rname{font-weight:700;font-size:.86rem}
+.tinp{background:transparent;border:none;border-bottom:1px dashed #30363d;color:#8b949e;font-size:.72rem;padding:1px 3px;outline:none;width:130px;margin-top:3px;display:block}
+.tinp:focus{border-bottom-color:#58a6ff;color:#e6edf3}
+.tinp::placeholder{color:#484f58}
+.rtotal{font-weight:700;color:#58a6ff;font-size:.86rem}
+.rbtns{display:flex;align-items:center;gap:6px}
+/* TABLE */
+.tbl{width:100%;border-collapse:collapse;font-size:.74rem}
+.tbl th{background:rgba(255,255,255,.03);color:#8b949e;padding:6px 8px;text-align:center;font-size:.6rem;text-transform:uppercase;letter-spacing:.4px;font-weight:700}
+.tbl th:first-child{text-align:left;padding-left:12px;width:90px}
+.tbl td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.04);text-align:center;vertical-align:middle}
+.tbl td:first-child{text-align:left;padding-left:12px}
+.ninp{width:74px;background:#0d1117;border:1px solid #30363d;border-radius:5px;padding:4px 6px;color:#e6edf3;font-size:.74rem;text-align:center;outline:none}
+.ninp:focus{border-color:#58a6ff}
+.dv{font-weight:700;color:#3fb950}
+.bv{font-weight:700;color:#58a6ff}
+.zv{color:#484f58}
+.ev{color:#f85149;font-size:.68rem}
+.trow td{background:rgba(88,166,255,.06)!important;font-weight:700;border-top:1px solid rgba(88,166,255,.15)!important}
+/* ADD METER */
+.amrow{display:flex;gap:5px;padding:8px 12px;background:rgba(255,255,255,.02);border-top:1px dashed #21262d;flex-wrap:wrap;align-items:center}
+.amrow label{font-size:.66rem;color:#484f58;font-weight:600}
+.sminp{background:#0d1117;border:1px solid #30363d;border-radius:5px;padding:5px 7px;color:#e6edf3;font-size:.72rem;outline:none}
+.sminp:focus{border-color:#58a6ff}
+.in-n{width:82px}.in-u{width:68px}.in-r{width:56px}
+/* MODAL */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:200;align-items:center;justify-content:center;padding:16px}
+.ov.on{display:flex!important}
+.mbox{background:#161b22;border:1px solid #30363d;border-radius:14px;padding:22px;width:100%;max-width:380px;animation:pop .18s ease}
+@keyframes pop{from{transform:scale(.93);opacity:0}to{transform:none;opacity:1}}
+.mbox h3{font-size:1rem;font-weight:700;margin-bottom:16px}
+.frow{margin-bottom:12px}
+.frow label{display:block;font-size:.66rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#8b949e;margin-bottom:5px}
+.finp{width:100%;background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:10px 12px;color:#e6edf3;font-size:.88rem;outline:none}
+.finp:focus{border-color:#58a6ff}
+.macts{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+/* STATS */
+.sgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:16px}
+.sc{background:#161b22;border:1px solid #21262d;border-radius:10px;padding:13px}
+.si{font-size:1.3rem;margin-bottom:7px}
+.sv{font-size:1.3rem;font-weight:700;line-height:1}
+.sl{font-size:.68rem;color:#8b949e;margin-top:3px}
+/* CHARTS */
+.cc{background:#161b22;border:1px solid #21262d;border-radius:10px;padding:13px;margin-bottom:11px}
+.ct{font-size:.82rem;font-weight:700;margin-bottom:11px}
+.barwrap{display:flex;align-items:flex-end;gap:5px;height:90px;padding-bottom:16px}
+.barcol{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;height:100%;justify-content:flex-end}
+.bar{width:100%;border-radius:4px 4px 0 0;min-height:3px}
+.barval{font-size:.55rem;color:#8b949e;white-space:nowrap}
+.barlbl{font-size:.57rem;color:#484f58;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;text-align:center}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:11px}
+/* TENANTS */
+.cbar{display:flex;gap:9px;margin-bottom:13px}
+.cbox{flex:1;border-radius:9px;padding:10px 13px;display:flex;align-items:center;gap:9px}
+.cval{font-size:1.15rem;font-weight:700}
+.clbl{font-size:.68rem;color:#8b949e}
+.tcard{background:#161b22;border:1px solid #21262d;border-radius:10px;margin-bottom:9px;overflow:hidden}
+.thdr{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;cursor:pointer;flex-wrap:wrap;gap:8px}
+.tav{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;flex-shrink:0}
+.tbody2{padding:12px 14px;border-top:1px solid #21262d}
+.htbl{width:100%;border-collapse:collapse;font-size:.74rem}
+.htbl th{background:#0d1117;color:#8b949e;padding:6px 9px;text-align:left;font-size:.6rem;text-transform:uppercase;letter-spacing:.4px;font-weight:700;border-bottom:1px solid #21262d}
+.htbl td{padding:6px 9px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle}
+.mtag{background:rgba(88,166,255,.1);color:#58a6ff;border-radius:4px;padding:2px 7px;font-weight:700;font-size:.7rem}
+.pbtn{border:none;border-radius:5px;padding:3px 9px;font-size:.68rem;font-weight:700;cursor:pointer;font-family:inherit}
+/* TOAST */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(10px);background:#161b22;border:1px solid #30363d;border-radius:9px;padding:10px 18px;font-size:.8rem;font-weight:600;z-index:999;box-shadow:0 8px 24px rgba(0,0,0,.6);transition:.25s;opacity:0;pointer-events:none;white-space:nowrap}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+/* BILL PREVIEW */
+.bpslip{border:1px solid #30363d;border-radius:7px;overflow:hidden;margin-bottom:8px}
+.bpshdr{display:flex;justify-content:space-between;padding:8px 12px;background:#0d1117}
+.bpsline{display:flex;justify-content:space-between;padding:6px 12px;border-top:1px solid #21262d;font-size:.76rem}
+/* RESPONSIVE */
+@media(max-width:600px){
+  .g2{grid-template-columns:1fr}
+  .ninp{width:62px}
+}
+@media print{
+  #topbar,#tabs,.abar,.amrow,.rbtns,.ov,.toast{display:none!important}
+  #content{padding:8px;max-width:100%}
+  body{background:#fff!important;color:#000!important}
+  .pg{display:block!important}
+}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <h1>⚡ Utility<b>Bills</b></h1>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span id="savedTxt">✅ Saved</span>
+    <input type="month" id="MP" onchange="onMonthChange(this.value)">
+  </div>
+</div>
+
+<!-- TABS -->
+<div id="tabs">
+  <button class="tab on" id="tb-b" onclick="goTab('b')"><span>🏢</span>Billing</button>
+  <button class="tab" id="tb-d" onclick="goTab('d')"><span>📊</span>Dashboard</button>
+  <button class="tab" id="tb-t" onclick="goTab('t')"><span>📈</span>Trends</button>
+  <button class="tab" id="tb-n" onclick="goTab('n')"><span>👤</span>Tenants</button>
+</div>
+
+<!-- CONTENT -->
+<div id="content">
+
+  <!-- BILLING -->
+  <div class="pg on" id="pg-b">
+    <div class="abar">
+      <button class="btn b-blue" onclick="openAddBuilding()">＋ Building</button>
+      <button class="btn b-ghost" onclick="openPreview()">📋 Preview Bills</button>
+      <button class="btn b-green" onclick="doExcel()">📊 Excel</button>
+      <button class="btn b-orange" onclick="doPDF()">📄 PDF</button>
+      <button class="btn b-ghost" onclick="copyLast()" style="font-size:.72rem">⬅ Copy Last Month</button>
+    </div>
+    <div id="BL"></div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="pg" id="pg-d">
+    <div class="sgrid" id="DSTATS"></div>
+    <div class="g2">
+      <div class="cc"><div class="ct">💰 Bill by Building</div><div class="barwrap" id="CH-B"></div></div>
+      <div class="cc"><div class="ct">💧 Usage by Building</div><div class="barwrap" id="CH-U"></div></div>
+    </div>
+    <div class="cc"><div class="ct">🏆 Top 5 Rooms</div><div id="TOP5"></div></div>
+  </div>
+
+  <!-- TRENDS -->
+  <div class="pg" id="pg-t">
+    <div class="cc"><div class="ct">💰 Monthly Bill Trend</div><div class="barwrap" id="TR-B" style="height:110px"></div></div>
+    <div class="cc"><div class="ct">💧 Monthly Usage Trend</div><div class="barwrap" id="TR-U" style="height:110px"></div></div>
+    <div class="cc"><div class="ct">📋 All Months Summary</div><div style="overflow-x:auto"><table class="htbl" id="TR-T"></table></div></div>
+  </div>
+
+  <!-- TENANTS -->
+  <div class="pg" id="pg-n">
+    <div class="cbar">
+      <div class="cbox" style="background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.18)">
+        <div style="font-size:1.4rem">✅</div>
+        <div><div class="cval" id="TC" style="color:#3fb950">₹0</div><div class="clbl">Collected</div></div>
+      </div>
+      <div class="cbox" style="background:rgba(248,81,73,.08);border:1px solid rgba(248,81,73,.18)">
+        <div style="font-size:1.4rem">⚠️</div>
+        <div><div class="cval" id="TUP" style="color:#f85149">₹0</div><div class="clbl">Pending</div></div>
+      </div>
+    </div>
+    <input type="text" id="TSEARCH" placeholder="🔍 Search room or tenant…" oninput="renderTenants()"
+      style="width:100%;background:#161b22;border:1px solid #30363d;border-radius:8px;padding:8px 12px;color:#e6edf3;font-size:.78rem;outline:none;margin-bottom:12px">
+    <div id="TL"></div>
+  </div>
+
+</div>
+
+<!-- ADD BUILDING MODAL -->
+<div class="ov" id="M-AB">
+  <div class="mbox">
+    <h3>🏢 Add Building</h3>
+    <div class="frow">
+      <label>Building Name</label>
+      <input class="finp" type="text" id="AB-N" placeholder="e.g. Block A, Building 1">
+    </div>
+    <div class="macts">
+      <button class="btn b-ghost" onclick="closeModal('M-AB')">Cancel</button>
+      <button class="btn b-blue" onclick="addBuilding()">Add Building</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD ROOM MODAL -->
+<div class="ov" id="M-AR">
+  <div class="mbox">
+    <h3>🏠 Add Room</h3>
+    <input type="hidden" id="AR-BID">
+    <div class="frow">
+      <label>Room Number</label>
+      <input class="finp" type="text" id="AR-N" placeholder="e.g. 101, GF-A, Room 2">
+    </div>
+    <div class="frow">
+      <label>Tenant Name (optional)</label>
+      <input class="finp" type="text" id="AR-T" placeholder="e.g. Ravi Kumar">
+    </div>
+    <div class="macts">
+      <button class="btn b-ghost" onclick="closeModal('M-AR')">Cancel</button>
+      <button class="btn b-blue" onclick="addRoom()">Add Room</button>
+    </div>
+  </div>
+</div>
+
+<!-- RENAME BUILDING MODAL -->
+<div class="ov" id="M-RB">
+  <div class="mbox">
+    <h3>✏️ Rename Building</h3>
+    <input type="hidden" id="RB-ID">
+    <div class="frow">
+      <label>Name</label>
+      <input class="finp" type="text" id="RB-N">
+    </div>
+    <div class="macts">
+      <button class="btn b-ghost" onclick="closeModal('M-RB')">Cancel</button>
+      <button class="btn b-blue" onclick="saveRename()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- BILL PREVIEW MODAL -->
+<div class="ov" id="M-PV">
+  <div class="mbox" style="max-width:500px;max-height:88vh;display:flex;flex-direction:column">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h3 style="margin:0">📄 Bills — <span id="PV-M" style="color:#58a6ff"></span></h3>
+      <button class="btn b-ghost b-sm" onclick="closeModal('M-PV')">✕</button>
+    </div>
+    <div id="PV-C" style="overflow-y:auto;flex:1"></div>
+    <div class="macts" style="margin-top:12px;padding-top:12px;border-top:1px solid #21262d">
+      <button class="btn b-ghost" onclick="closeModal('M-PV')">Close</button>
+      <button class="btn b-blue" onclick="window.print()">🖨️ Print</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="TOAST"></div>
+
+<script>
+// ═══════════════════════════════
+//  STATE & CONSTANTS
+// ═══════════════════════════════
+var S = { buildings: [] };
+var TD = {};
+var PAL = ['#58a6ff','#3fb950','#d29922','#a78bfa','#f85149','#ffd166'];
+var BC = [
+  {bg:'rgba(88,166,255,.15)',tx:'#58a6ff'},
+  {bg:'rgba(63,185,80,.15)',tx:'#3fb950'},
+  {bg:'rgba(210,153,34,.15)',tx:'#d29922'},
+  {bg:'rgba(167,139,250,.15)',tx:'#a78bfa'},
+  {bg:'rgba(248,81,73,.15)',tx:'#f85149'}
+];
+var MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+var autoTimer, tTimer, lastM;
+
+function uid(){ return '_' + Math.random().toString(36).substr(2,9); }
+function ge(id){ return document.getElementById(id); }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmt(m){ if(!m) return ''; var p=m.split('-'); return MONTHS[+p[1]-1]+' '+p[0]; }
+function fmts(m){ if(!m) return ''; var p=m.split('-'); return MONTHS[+p[1]-1].slice(0,3)+' '+p[0].slice(2); }
+function mB(m){ var d=Math.max(0,(parseFloat(m.curr)||0)-(parseFloat(m.last)||0)); return d*(parseFloat(m.rate)||0); }
+function mU(m){ return Math.max(0,(parseFloat(m.curr)||0)-(parseFloat(m.last)||0)); }
+function rB(r){ return r.meters.reduce(function(s,m){ return s+mB(m); },0); }
+function rU(r){ return r.meters.reduce(function(s,m){ return s+mU(m); },0); }
+function bB(b){ return b.rooms.reduce(function(s,r){ return s+rB(r); },0); }
+function bU(b){ return b.rooms.reduce(function(s,r){ return s+rU(r); },0); }
+function totB(){ return S.buildings.reduce(function(s,b){ return s+bB(b); },0); }
+function totU(){ return S.buildings.reduce(function(s,b){ return s+bU(b); },0); }
+function totR(){ return S.buildings.reduce(function(s,b){ return s+b.rooms.length; },0); }
+function fB(id){ return S.buildings.find(function(b){ return b.id===id; }); }
+function fR(bid,rid){ var b=fB(bid); return b && b.rooms.find(function(r){ return r.id===rid; }); }
+function fM(bid,rid,mid){ var r=fR(bid,rid); return r && r.meters.find(function(m){ return m.id===mid; }); }
+function getT(rid){ if(!TD[rid]) TD[rid]={name:'',ps:{}}; return TD[rid]; }
+
+// ═══════════════════════════════
+//  TOAST
+// ═══════════════════════════════
+function toast(msg){
+  var t = ge('TOAST');
+  t.textContent = msg;
+  t.classList.add('on');
+  clearTimeout(t._t);
+  t._t = setTimeout(function(){ t.classList.remove('on'); }, 2800);
+}
+
+// ═══════════════════════════════
+//  MODAL
+// ═══════════════════════════════
+function openModal(id){
+  ge(id).classList.add('on');
+}
+function closeModal(id){
+  ge(id).classList.remove('on');
+}
+document.addEventListener('click', function(e){
+  if(e.target.classList.contains('ov')) e.target.classList.remove('on');
+});
+
+function openAddBuilding(){
+  ge('AB-N').value = '';
+  openModal('M-AB');
+  setTimeout(function(){ ge('AB-N').focus(); }, 150);
+}
+function openAddRoom(bid){
+  ge('AR-BID').value = bid;
+  ge('AR-N').value = '';
+  ge('AR-T').value = '';
+  openModal('M-AR');
+  setTimeout(function(){ ge('AR-N').focus(); }, 150);
+}
+function openRename(bid){
+  var b = fB(bid); if(!b) return;
+  ge('RB-ID').value = bid;
+  ge('RB-N').value = b.name;
+  openModal('M-RB');
+  setTimeout(function(){ ge('RB-N').focus(); }, 150);
+}
+
+// ═══════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════
+function goTab(p){
+  ['b','d','t','n'].forEach(function(x){
+    var pg = ge('pg-'+x), tb = ge('tb-'+x);
+    if(pg) pg.classList.toggle('on', x===p);
+    if(tb) tb.classList.toggle('on', x===p);
+  });
+  if(p==='d') renderDash();
+  if(p==='t') renderTrends();
+  if(p==='n') renderTenants();
+}
+
+// ═══════════════════════════════
+//  MONTH
+// ═══════════════════════════════
+function curM(){ return ge('MP').value; }
+
+function onMonthChange(v){
+  if(lastM) saveM(lastM);
+  lastM = v;
+  loadM(v);
+  toast('📅 ' + fmt(v));
+}
+
+// ═══════════════════════════════
+//  SAVE / LOAD
+// ═══════════════════════════════
+function autoSave(){
+  // Save immediately — no delay
+  saveM(curM());
+  var t = ge('savedTxt');
+  t.classList.add('on');
+  setTimeout(function(){ t.classList.remove('on'); }, 1500);
+}
+
+function saveM(m){
+  if(!m) return;
+  // Save structure (buildings/rooms/meters) SEPARATELY - persists forever
+  var struct = { buildings: S.buildings.map(function(b){
+    return { id:b.id, name:b.name, rooms: b.rooms.map(function(r){
+      return { id:r.id, name:r.name, meters: r.meters.map(function(mt){
+        return { id:mt.id, name:mt.name, unit:mt.unit, rate:mt.rate };
+      })};
+    })};
+  })};
+  localStorage.setItem('ubm_struct', JSON.stringify(struct));
+  // Save readings for this month separately
+  var readings = {};
+  S.buildings.forEach(function(b){ b.rooms.forEach(function(r){ r.meters.forEach(function(mt){
+    if(!readings[r.id]) readings[r.id]={};
+    readings[r.id][mt.id]={last:mt.last||'',curr:mt.curr||''};
+  });});});
+  localStorage.setItem('ubm_r_'+m, JSON.stringify(readings));
+}
+
+function loadM(m){
+  // Load structure first
+  var stSv = localStorage.getItem('ubm_struct');
+  if(stSv){ try{ S = JSON.parse(stSv); }catch(e){} }
+  // Then apply readings for this month
+  var rdSv = localStorage.getItem('ubm_r_'+m);
+  var readings = rdSv ? JSON.parse(rdSv) : {};
+  S.buildings.forEach(function(b){ b.rooms.forEach(function(r){ r.meters.forEach(function(mt){
+    var rd = readings[r.id] && readings[r.id][mt.id];
+    mt.last = rd ? rd.last : '';
+    mt.curr = rd ? rd.curr : '';
+  });});});
+  render();
+  var cur = document.querySelector('.pg.on');
+  if(cur){
+    var id = cur.id.replace('pg-','');
+    if(id==='d') renderDash();
+    if(id==='t') renderTrends();
+    if(id==='n') renderTenants();
+  }
+}
+
+function saveTD(){
+  localStorage.setItem('ubt', JSON.stringify(TD));
+}
+
+function allMs(){
+  var ms = [];
+  for(var i=0;i<localStorage.length;i++){
+    var k = localStorage.key(i);
+    if(k && k.startsWith('ubm_r_')) ms.push(k.replace('ubm_r_',''));
+  }
+  return ms.sort();
+}
+function getMS(m){
+  // Rebuild full state for a month from structure + readings
+  var stSv = localStorage.getItem('ubm_struct');
+  if(!stSv) return null;
+  var st; try{ st=JSON.parse(stSv); }catch(e){ return null; }
+  var rdSv = localStorage.getItem('ubm_r_'+m);
+  var readings = rdSv ? JSON.parse(rdSv) : {};
+  st.buildings.forEach(function(b){ b.rooms.forEach(function(r){ r.meters.forEach(function(mt){
+    var rd = readings[r.id] && readings[r.id][mt.id];
+    mt.last = rd ? rd.last : '';
+    mt.curr = rd ? rd.curr : '';
+  });});});
+  return st;
+}
+
+function copyLast(){
+  var m = curM(); if(!m){ toast('⚠️ Select a month'); return; }
+  var p = m.split('-').map(Number);
+  var pm = p[1]===1?12:p[1]-1, py = p[1]===1?p[0]-1:p[0];
+  var pk = 'ubm_'+py+'-'+String(pm).padStart(2,'0');
+  var sv = localStorage.getItem(pk);
+  if(!sv){ toast('⚠️ No data for previous month'); return; }
+  try{
+    var ps = JSON.parse(sv);
+    ps.buildings.forEach(function(b){ b.rooms.forEach(function(r){ r.meters.forEach(function(mt){ mt.last=mt.curr; mt.curr=''; }); }); });
+    S = ps; render(); autoSave(); toast('⬅ Last month readings loaded!');
+  } catch(e){ toast('⚠️ Error loading previous month'); }
+}
+
+// ═══════════════════════════════
+//  RENDER BILLING
+// ═══════════════════════════════
+function render(){
+  var el = ge('BL');
+  if(!S.buildings.length){
+    el.innerHTML = '<div style="text-align:center;padding:50px 20px;color:#484f58"><div style="font-size:3rem;margin-bottom:12px">🏢</div><div style="font-weight:600;font-size:1rem;margin-bottom:6px">No buildings yet</div><div style="font-size:.82rem">Tap <b style="color:#58a6ff">＋ Building</b> above to get started</div></div>';
+    return;
+  }
+  el.innerHTML = '';
+  S.buildings.forEach(function(b, bi){
+    var c = BC[bi % BC.length];
+    var bb = bB(b);
+    var div = document.createElement('div');
+    div.className = 'bcard';
+    div.id = 'BC-' + b.id;
+    div.innerHTML =
+      '<div class="bhdr" onclick="toggleBldg(\'' + b.id + '\')">' +
+        '<div class="bleft">' +
+          '<div class="bnum" style="background:' + c.bg + ';color:' + c.tx + '">' + (bi+1) + '</div>' +
+          '<div>' +
+            '<div class="bname">' + esc(b.name) + '</div>' +
+            '<div class="bmeta">' + b.rooms.length + ' room' + (b.rooms.length!==1?'s':'') + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center">' +
+          '<div class="btotal">' + (bb>0?'₹'+bb.toFixed(2):'—') + '</div>' +
+          '<span class="chev">▼</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="cbody">' +
+        '<div id="RL-' + b.id + '"></div>' +
+        '<div class="abar" style="margin-top:9px;margin-bottom:0">' +
+          '<button class="btn b-blue b-sm" onclick="openAddRoom(\'' + b.id + '\')">＋ Add Room</button>' +
+          '<button class="btn b-ghost b-sm" onclick="openRename(\'' + b.id + '\')">✏️ Rename</button>' +
+          '<button class="btn b-red b-sm" onclick="delBldg(\'' + b.id + '\')">🗑 Delete</button>' +
+        '</div>' +
+      '</div>';
+    el.appendChild(div);
+    var rl = ge('RL-' + b.id);
+    b.rooms.forEach(function(r){ rl.appendChild(renderRoom(b, r)); });
+  });
+}
+
+function renderRoom(b, r){
+  var rb = rB(r);
+  var t = getT(r.id);
+  var div = document.createElement('div');
+  div.className = 'rcard';
+  div.id = 'RC-' + r.id;
+
+  // Build meter rows
+  var rows = '';
+  r.meters.forEach(function(m, i){
+    var lv = parseFloat(m.last)||0, cv = parseFloat(m.curr)||0, diff = cv - lv;
+    var bill = diff>0 ? (diff*(parseFloat(m.rate)||0)).toFixed(2) : null;
+    var dot = PAL[i % PAL.length];
+    var dc = '<span class="zv">—</span>';
+    var bc = '<span class="zv">—</span>';
+    if(m.curr!=='' || m.last!==''){
+      if(diff < 0){
+        dc = '<span class="ev">' + diff + ' ⚠</span>';
+        bc = '<span class="ev">Err</span>';
+      } else if(m.curr !== ''){
+        dc = '<span class="dv">' + diff + ' ' + esc(m.unit) + '</span>';
+        bc = bill ? '<span class="bv">₹' + bill + '</span>' : '<span class="zv">—</span>';
+      }
+    }
+    rows +=
+      '<tr>' +
+        '<td>' +
+          '<div style="display:flex;align-items:center;gap:5px">' +
+            '<div style="width:6px;height:6px;border-radius:50%;background:' + dot + ';flex-shrink:0"></div>' +
+            '<div style="font-weight:600">' + esc(m.name) + '</div>' +
+          '</div>' +
+        '</td>' +
+        '<td>' +
+          '<input class="ninp" type="number" value="' + esc(m.last) + '" placeholder="0" min="0" ' +
+            'oninput="updR(\'' + b.id + '\',\'' + r.id + '\',\'' + m.id + '\',\'last\',this.value)">' +
+        '</td>' +
+        '<td>' +
+          '<input class="ninp" type="number" value="' + esc(m.curr) + '" placeholder="0" min="0" ' +
+            'oninput="updR(\'' + b.id + '\',\'' + r.id + '\',\'' + m.id + '\',\'curr\',this.value)">' +
+        '</td>' +
+        '<td id="DC-' + m.id + '">' + dc + '</td>' +
+        '<td style="color:#8b949e;font-size:.72rem">₹' + esc(m.rate) + '/' + esc(m.unit) + '</td>' +
+        '<td id="BC-' + m.id + '">' + bc + '</td>' +
+        '<td><button class="btn b-red" style="padding:3px 7px;font-size:.65rem" onclick="delMeter(\'' + b.id + '\',\'' + r.id + '\',\'' + m.id + '\')">✕</button></td>' +
+      '</tr>';
+  });
+
+  var trow = '';
+  if(r.meters.length > 1){
+    trow =
+      '<tr class="trow">' +
+        '<td colspan="3" style="text-align:right;font-size:.66rem;color:#484f58;padding-right:10px">Room Total →</td>' +
+        '<td style="color:#3fb950">' + rU(r) + ' units</td>' +
+        '<td></td>' +
+        '<td style="color:#58a6ff">₹' + rb.toFixed(2) + '</td>' +
+        '<td></td>' +
+      '</tr>';
+  }
+
+  div.innerHTML =
+    '<div class="rhdr">' +
+      '<div>' +
+        '<div class="rname">🏠 Room ' + esc(r.name) + '</div>' +
+        '<input class="tinp" type="text" placeholder="👤 Tenant name…" value="' + esc(t.name||'') + '" ' +
+          'id="TI-' + r.id + '" ' +
+          'oninput="setTN(\'' + r.id + '\',this.value)">' +
+      '</div>' +
+      '<div class="rbtns">' +
+        '<div class="rtotal" id="RT-' + r.id + '">' + (rb>0?'₹'+rb.toFixed(2):'—') + '</div>' +
+        '<button class="btn b-orange b-sm" onclick="genBillPDF(\'' + b.id + '\',\'' + r.id + '\',\'' + esc(b.name) + '\')">📄 Bill PDF</button>' +
+        '<button class="btn b-red b-sm" onclick="delRoom(\'' + b.id + '\',\'' + r.id + '\')">🗑</button>' +
+      '</div>' +
+    '</div>' +
+    '<div style="overflow-x:auto">' +
+    '<table class="tbl">' +
+      '<thead><tr>' +
+        '<th>Meter</th><th>Last Reading</th><th>Current Reading</th><th>Used</th><th>Rate</th><th>Amount</th><th></th>' +
+      '</tr></thead>' +
+      '<tbody>' + rows + trow + '</tbody>' +
+    '</table>' +
+    '</div>' +
+    '<div class="amrow">' +
+      '<label>＋ Add Meter:</label>' +
+      '<input class="sminp in-n" type="text" id="MN-' + r.id + '" placeholder="Water">' +
+      '<input class="sminp in-u" type="text" id="MU-' + r.id + '" placeholder="Litres">' +
+      '<input class="sminp in-r" type="number" id="MR-' + r.id + '" placeholder="Rate" step="0.01">' +
+      '<button class="btn b-blue b-sm" onclick="addMeter(\'' + b.id + '\',\'' + r.id + '\')">Add</button>' +
+    '</div>';
+
+  return div;
+}
+
+// ═══════════════════════════════
+//  MUTATIONS
+// ═══════════════════════════════
+function updR(bid, rid, mid, field, val){
+  var m = fM(bid,rid,mid); if(!m) return;
+  m[field] = val;
+  var lv = parseFloat(m.last)||0, cv = parseFloat(m.curr)||0, diff = cv - lv;
+  var bill = diff>0 ? (diff*(parseFloat(m.rate)||0)).toFixed(2) : null;
+  var dc = ge('DC-'+mid), bc = ge('BC-'+mid);
+  if(dc && bc){
+    if(diff<0){
+      dc.innerHTML='<span class="ev">'+diff+' ⚠</span>';
+      bc.innerHTML='<span class="ev">Err</span>';
+    } else {
+      dc.innerHTML='<span class="dv">'+diff+' '+esc(m.unit)+'</span>';
+      bc.innerHTML=bill?'<span class="bv">₹'+bill+'</span>':'<span class="zv">—</span>';
+    }
+  }
+  var r=fR(bid,rid); var rb=rB(r);
+  var rt=ge('RT-'+rid); if(rt) rt.textContent=rb>0?'₹'+rb.toFixed(2):'—';
+  var b=fB(bid); var bb=bBill(b);
+  var bcEl=ge('BC-'+bid); if(bcEl){ var btEl=bcEl.querySelector('.btotal'); if(btEl) btEl.textContent=bb>0?'₹'+bb.toFixed(2):'—'; }
+  var rc=ge('RC-'+rid); if(rc){ var trs=rc.querySelectorAll('.trow'); if(trs.length){ trs[0].cells[3].textContent=rU(r)+' units'; trs[0].cells[5].textContent='₹'+rb.toFixed(2); } }
+  autoSave();
+}
+
+function bBill(b){ return b.rooms.reduce(function(s,r){ return s+rB(r); },0); }
+
+function addBuilding(){
+  var n = ge('AB-N').value.trim();
+  if(!n){ alert('Please enter a building name'); return; }
+  S.buildings.push({ id:uid(), name:n, rooms:[] });
+  ge('AB-N').value = '';
+  closeModal('M-AB');
+  render(); autoSave(); toast('🏢 "'+n+'" added!');
+}
+
+function addRoom(){
+  var bid = ge('AR-BID').value;
+  var n = ge('AR-N').value.trim();
+  var tn = ge('AR-T').value.trim();
+  if(!n){ alert('Please enter a room number'); return; }
+  var b = fB(bid); if(!b) return;
+  var rid = uid();
+  b.rooms.push({ id:rid, name:n, meters:[] });
+  if(tn){ getT(rid).name = tn; saveTD(); }
+  ge('AR-N').value = ''; ge('AR-T').value = '';
+  closeModal('M-AR');
+  render(); autoSave(); toast('🏠 Room "'+n+'" added!');
+}
+
+function addMeter(bid, rid){
+  var n = ge('MN-'+rid).value.trim();
+  var u = ge('MU-'+rid).value.trim();
+  var r2 = parseFloat(ge('MR-'+rid).value) || 0;
+  if(!n){ alert('Enter meter name e.g. Water'); return; }
+  var rm = fR(bid,rid); if(!rm) return;
+  rm.meters.push({ id:uid(), name:n, unit:u||'units', rate:r2, last:'', curr:'' });
+  render(); autoSave(); toast('✅ '+n+' meter added!');
+}
+
+function delMeter(bid,rid,mid){
+  var r = fR(bid,rid); if(!r) return;
+  r.meters = r.meters.filter(function(m){ return m.id!==mid; });
+  render(); autoSave();
+}
+function delRoom(bid,rid){
+  if(!confirm('Delete this room?')) return;
+  var b = fB(bid);
+  b.rooms = b.rooms.filter(function(r){ return r.id!==rid; });
+  render(); autoSave();
+}
+function delBldg(bid){
+  if(!confirm('Delete building and all rooms?')) return;
+  S.buildings = S.buildings.filter(function(b){ return b.id!==bid; });
+  render(); autoSave();
+}
+function saveRename(){
+  var n = ge('RB-N').value.trim(); if(!n) return;
+  var b = fB(ge('RB-ID').value); if(b) b.name = n;
+  closeModal('M-RB'); render(); autoSave();
+}
+function toggleBldg(bid){ var el=ge('BC-'+bid); if(el) el.classList.toggle('closed'); }
+function setTN(rid, n){
+  getT(rid).name = n;
+  clearTimeout(tTimer); tTimer = setTimeout(saveTD, 1000);
+}
+function togPay(rid, m){
+  var t = getT(rid);
+  t.ps[m] = (t.ps[m]==='paid') ? 'unpaid' : 'paid';
+  saveTD(); renderTenants();
+}
+
+// ═══════════════════════════════
+//  BILL PREVIEW
+// ═══════════════════════════════
+function openPreview(){
+  ge('PV-M').textContent = fmt(curM());
+  var c = ge('PV-C'); c.innerHTML = '';
+  S.buildings.forEach(function(b,bi){
+    var cl = BC[bi%BC.length];
+    var sec = document.createElement('div'); sec.style.marginBottom='13px';
+    sec.innerHTML = '<div style="font-size:.78rem;font-weight:700;padding:5px 11px;border-radius:5px;margin-bottom:7px;background:'+cl.bg+';color:'+cl.tx+'">🏢 '+esc(b.name)+'</div>';
+    b.rooms.forEach(function(r){
+      var rb=rB(r);
+      var slip=document.createElement('div'); slip.className='bpslip';
+      var lines=r.meters.map(function(m){ var u=mU(m),bl=mB(m); return '<div class="bpsline"><div><div style="font-weight:600">'+esc(m.name)+'</div><div style="font-size:.64rem;color:#8b949e">'+(parseFloat(m.last)||0)+' → '+(parseFloat(m.curr)||0)+' | '+u+' '+esc(m.unit)+' × ₹'+m.rate+'</div></div><div style="font-weight:700;color:#3fb950">₹'+bl.toFixed(2)+'</div></div>'; }).join('');
+      slip.innerHTML='<div class="bpshdr"><div style="font-weight:700;font-size:.84rem">🏠 Room '+esc(r.name)+'</div><div style="font-weight:700;color:#58a6ff">₹'+rb.toFixed(2)+'</div></div>'+lines;
+      sec.appendChild(slip);
+    });
+    c.appendChild(sec);
+  });
+  openModal('M-PV');
+}
+
+// ═══════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════
+function renderDash(){
+  var tb=totB(),tu=totU(),nr=totR(),nb=S.buildings.length;
+  ge('DSTATS').innerHTML=
+    '<div class="sc"><div class="si">💰</div><div class="sv" style="color:#58a6ff">₹'+tb.toFixed(0)+'</div><div class="sl">Total Bill</div></div>'+
+    '<div class="sc"><div class="si">💧</div><div class="sv" style="color:#3fb950">'+tu+'</div><div class="sl">Total Usage</div></div>'+
+    '<div class="sc"><div class="si">🏢</div><div class="sv" style="color:#d29922">'+nb+'</div><div class="sl">Buildings</div></div>'+
+    '<div class="sc"><div class="si">🏠</div><div class="sv" style="color:#a78bfa">'+nr+'</div><div class="sl">Rooms</div></div>';
+  barChart('CH-B', S.buildings.map(function(b){ return {l:b.name,v:bB(b)}; }));
+  barChart('CH-U', S.buildings.map(function(b){ return {l:b.name,v:bU(b)}; }));
+  var ar = [];
+  S.buildings.forEach(function(b){ b.rooms.forEach(function(r){ ar.push({bldg:b.name,room:r,bill:rB(r)}); }); });
+  ar.sort(function(a,b){ return b.bill-a.bill; });
+  var top = ar.slice(0,5), mx=Math.max.apply(null,top.map(function(h){return h.bill;}).concat([1]));
+  ge('TOP5').innerHTML = top.length ? top.map(function(h,i){
+    return '<div style="display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04)">'+
+      '<div style="width:19px;height:19px;border-radius:50%;background:'+PAL[i]+'22;color:'+PAL[i]+';display:flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:700">'+(i+1)+'</div>'+
+      '<div style="flex:1;min-width:0"><div style="font-size:.76rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(h.room.name)+' <span style="color:#484f58;font-size:.66rem">'+esc(h.bldg)+'</span></div>'+
+      '<div style="background:#21262d;border-radius:2px;height:4px;margin-top:3px"><div style="width:'+(h.bill/mx*100).toFixed(1)+'%;background:'+PAL[i]+';border-radius:2px;height:4px"></div></div></div>'+
+      '<div style="font-weight:700;color:'+PAL[i]+';font-size:.8rem">₹'+h.bill.toFixed(0)+'</div></div>';
+  }).join('') : '<div style="color:#484f58;font-size:.78rem;padding:10px 0">No data yet</div>';
+}
+
+function barChart(eid, data){
+  var el=ge(eid);
+  if(!data.length||data.every(function(d){return d.v===0;})){ el.innerHTML='<div style="color:#484f58;font-size:.74rem;padding:12px;text-align:center">No data</div>'; return; }
+  var mx=Math.max.apply(null,data.map(function(d){return d.v;}).concat([1]));
+  el.innerHTML=data.map(function(d,i){
+    var h=Math.max(3,d.v/mx*78),lbl=d.l.length>8?d.l.slice(0,7)+'…':d.l,val=d.v>999?(d.v/1000).toFixed(1)+'k':d.v.toFixed(0);
+    return '<div class="barcol"><div class="barval">'+val+'</div><div class="bar" style="height:'+h+'px;background:'+PAL[i%PAL.length]+'"></div><div class="barlbl">'+esc(lbl)+'</div></div>';
+  }).join('');
+}
+
+// ═══════════════════════════════
+//  TRENDS
+// ═══════════════════════════════
+function renderTrends(){
+  var ms=allMs();
+  if(!ms.length){ ge('TR-B').innerHTML='<div style="color:#484f58;padding:14px;text-align:center;font-size:.76rem">Save data for 2+ months to see trends</div>'; ge('TR-U').innerHTML=''; ge('TR-T').innerHTML=''; return; }
+  var data=ms.map(function(m){ var sv=getMS(m); if(!sv) return null; var tb=0,tu=0; sv.buildings.forEach(function(b){ b.rooms.forEach(function(r){ r.meters.forEach(function(mt){ var d=Math.max(0,(parseFloat(mt.curr)||0)-(parseFloat(mt.last)||0)); tb+=d*(parseFloat(mt.rate)||0); tu+=d; }); }); }); return{m:m,l:fmts(m),bill:tb,usage:tu}; }).filter(Boolean);
+  barChartData('TR-B',data.map(function(d){return{l:d.l,v:d.bill};}));
+  barChartData('TR-U',data.map(function(d){return{l:d.l,v:d.usage};}));
+  ge('TR-T').innerHTML='<thead><tr><th>Month</th><th>Usage</th><th>Total Bill</th><th>Rooms</th><th>Avg/Room</th></tr></thead><tbody>'+data.map(function(d){ var sv=getMS(d.m),nr=sv?sv.buildings.reduce(function(s,b){return s+b.rooms.length;},0):0,avg=nr>0?(d.bill/nr).toFixed(2):'0.00'; return'<tr><td><span class="mtag">'+d.l+'</span></td><td>'+d.usage+'</td><td style="font-weight:700;color:#3fb950">₹'+d.bill.toFixed(2)+'</td><td>'+nr+'</td><td>₹'+avg+'</td></tr>'; }).join('')+'</tbody>';
+}
+
+function barChartData(eid, data){
+  var el=ge(eid);
+  if(!data.length||data.every(function(d){return d.v===0;})){ el.innerHTML='<div style="color:#484f58;font-size:.74rem;padding:12px;text-align:center">No data</div>'; return; }
+  var mx=Math.max.apply(null,data.map(function(d){return d.v;}).concat([1])),PAL2=['#58a6ff'];
+  el.innerHTML=data.map(function(d,i){ var h=Math.max(3,d.v/mx*95),lbl=d.l.length>8?d.l.slice(0,7)+'…':d.l,val=d.v>999?(d.v/1000).toFixed(1)+'k':d.v.toFixed(0); return'<div class="barcol"><div class="barval">'+val+'</div><div class="bar" style="height:'+h+'px;background:'+PAL2[i%PAL2.length]+'"></div><div class="barlbl">'+esc(lbl)+'</div></div>'; }).join('');
+}
+
+// ═══════════════════════════════
+//  TENANTS
+// ═══════════════════════════════
+function allHA(){
+  var map={};
+  S.buildings.forEach(function(b){ b.rooms.forEach(function(r){ map[b.id+'_'+r.id]={bid:b.id,bn:b.name,rid:r.id,rn:r.name}; }); });
+  allMs().forEach(function(m){ var sv=getMS(m); if(!sv) return; sv.buildings.forEach(function(b){ b.rooms.forEach(function(r){ var k=b.id+'_'+r.id; if(!map[k]) map[k]={bid:b.id,bn:b.name,rid:r.id,rn:r.name}; }); }); });
+  return Object.values(map);
+}
+function getRBM(rid,m){ var sv=getMS(m); if(!sv) return null; for(var i=0;i<sv.buildings.length;i++){ var b=sv.buildings[i]; for(var j=0;j<b.rooms.length;j++){ var r=b.rooms[j]; if(r.id===rid){ var bill=r.meters.reduce(function(s,mt){var d=Math.max(0,(parseFloat(mt.curr)||0)-(parseFloat(mt.last)||0));return s+d*(parseFloat(mt.rate)||0);},0),usage=r.meters.reduce(function(s,mt){return s+Math.max(0,(parseFloat(mt.curr)||0)-(parseFloat(mt.last)||0));},0); return{bill:bill,usage:usage}; }}} return null; }
+
+function renderTenants(){
+  var sv=(ge('TSEARCH')?ge('TSEARCH').value||'':'').toLowerCase();
+  var ms=allMs(),allH=allHA();
+  var tc=0,tup=0;
+  allH.forEach(function(h){ ms.forEach(function(m){ var bd=getRBM(h.rid,m); if(!bd||bd.bill===0) return; var t=getT(h.rid); if((t.ps[m]||'unpaid')==='paid') tc+=bd.bill; else tup+=bd.bill; }); });
+  if(ge('TC')) ge('TC').textContent='₹'+tc.toFixed(2);
+  if(ge('TUP')) ge('TUP').textContent='₹'+tup.toFixed(2);
+  var filtered=allH.filter(function(h){ var t=getT(h.rid); if(sv&&!h.rn.toLowerCase().includes(sv)&&!(t.name||'').toLowerCase().includes(sv)&&!h.bn.toLowerCase().includes(sv)) return false; return true; });
+  var cont=ge('TL');
+  if(!filtered.length){ cont.innerHTML='<div style="text-align:center;padding:30px;color:#484f58">No tenants found</div>'; return; }
+  var byB={};
+  filtered.forEach(function(h){ if(!byB[h.bn]) byB[h.bn]=[]; byB[h.bn].push(h); });
+  cont.innerHTML='';
+  var bi2=0;
+  Object.keys(byB).forEach(function(bn){
+    var col=PAL[bi2++%PAL.length];
+    var bl=document.createElement('div');
+    bl.style.cssText='font-size:.68rem;font-weight:700;color:'+col+';text-transform:uppercase;letter-spacing:.5px;padding:5px 0 5px 3px;margin-top:4px;';
+    bl.textContent='🏢 '+bn; cont.appendChild(bl);
+    byB[bn].forEach(function(h,hi){
+      var t=getT(h.rid),ac=PAL[(bi2+hi)%PAL.length],init=h.rn.slice(0,2).toUpperCase();
+      var md=ms.map(function(m){ var bd=getRBM(h.rid,m),st=t.ps[m]||'unpaid'; return{m:m,bd:bd,st:st}; }).filter(function(d){return d.bd&&d.bd.bill>0;});
+      var tba=md.reduce(function(s,d){return s+d.bd.bill;},0),tpa=md.filter(function(d){return d.st==='paid';}).reduce(function(s,d){return s+d.bd.bill;},0),um=md.filter(function(d){return d.st==='unpaid';}).length;
+      var mxS=Math.max.apply(null,md.map(function(d){return d.bd.bill;}).concat([1]));
+      var spark=md.length?'<div style="display:flex;align-items:flex-end;gap:2px;height:20px">'+md.map(function(d){return'<div style="border-radius:2px 2px 0 0;width:5px;height:'+Math.max(3,d.bd.bill/mxS*18)+'px;background:'+(d.st==='paid'?'#3fb950':'#f85149')+';opacity:.85"></div>';}).join('')+'</div>':'';
+      var card=document.createElement('div'); card.className='tcard';
+      card.innerHTML=
+        '<div class="thdr" onclick="togTCard(\'TB2-'+h.rid+'\')">' +
+          '<div style="display:flex;align-items:center;gap:9px">' +
+            '<div class="tav" style="background:'+ac+'22;color:'+ac+'">'+init+'</div>' +
+            '<div>' +
+              '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">' +
+                '<div style="font-weight:700;font-size:.88rem">Room '+esc(h.rn)+'</div>' +
+                '<input type="text" placeholder="+ Tenant name" value="'+esc(t.name||'')+'" ' +
+                  'id="TNI-'+h.rid+'" ' +
+                  'oninput="setTN(\''+h.rid+'\',this.value)" ' +
+                  'onclick="event.stopPropagation()" ' +
+                  'style="background:transparent;border:none;border-bottom:1px dashed #30363d;color:#e6edf3;font-size:.76rem;padding:1px 4px;outline:none;width:118px">' +
+              '</div>' +
+              '<div style="font-size:.66rem;color:#8b949e;margin-top:2px">' +
+                md.length+' month'+(md.length!==1?'s':'')+' · '+
+                (um>0?'<span style="color:#f85149;font-weight:700">'+um+' unpaid</span>':'<span style="color:#3fb950">All paid ✓</span>')+
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div style="display:flex;align-items:center;gap:12px">' +
+            spark +
+            '<div><div style="font-weight:700;color:#3fb950;font-size:.85rem">₹'+tpa.toFixed(0)+'</div><div style="font-size:.6rem;color:#484f58">Paid</div></div>' +
+            '<div><div style="font-weight:700;color:'+(tba-tpa>0?'#f85149':'#484f58')+';font-size:.85rem">₹'+(tba-tpa).toFixed(0)+'</div><div style="font-size:.6rem;color:#484f58">Due</div></div>' +
+            '<span style="color:#484f58;font-size:.68rem" id="CHV-'+h.rid+'">▼</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="tbody2" id="TB2-'+h.rid+'" style="display:none">' +
+          (md.length===0 ? '<div style="color:#484f58;font-size:.78rem">No billing data yet</div>' :
+          '<div style="overflow-x:auto"><table class="htbl"><thead><tr><th>Month</th><th>Usage</th><th>Bill</th><th>Status</th></tr></thead><tbody>'+
+          md.map(function(d){ return'<tr><td><span class="mtag">'+fmts(d.m)+'</span></td><td style="color:#3fb950;font-weight:600">'+d.bd.usage+'</td><td style="font-weight:700;color:#58a6ff">₹'+d.bd.bill.toFixed(2)+'</td><td><button class="pbtn" style="background:'+(d.st==='paid'?'rgba(63,185,80,.12)':'rgba(248,81,73,.12)')+';color:'+(d.st==='paid'?'#3fb950':'#f85149')+'" onclick="togPay(\''+h.rid+'\',\''+d.m+'\')">'+(d.st==='paid'?'✓ Paid':'✗ Unpaid')+'</button></td></tr>'; }).join('')+
+          '<tr style="background:rgba(88,166,255,.05)"><td style="font-weight:700">Total</td><td style="color:#3fb950;font-weight:700">'+md.reduce(function(s,d){return s+d.bd.usage;},0)+'</td><td style="font-weight:700;color:#58a6ff">₹'+tba.toFixed(2)+'</td><td style="font-size:.7rem"><span style="color:#3fb950;font-weight:700">₹'+tpa.toFixed(2)+' paid</span>'+(tba-tpa>0?'<span style="color:#f85149;font-weight:700;margin-left:6px">₹'+(tba-tpa).toFixed(2)+' due</span>':'')+'</td></tr>'+
+          '</tbody></table></div>') +
+        '</div>';
+      cont.appendChild(card);
+    });
+  });
+}
+
+function togTCard(id){ var el=ge(id); if(!el) return; var op=el.style.display!=='none'; el.style.display=op?'none':'block'; var rid=id.replace('TB2-',''); var ch=ge('CHV-'+rid); if(ch) ch.style.transform=op?'':'rotate(180deg)'; }
+
+// ═══════════════════════════════
+//  ROOM BILL PDF
+// ═══════════════════════════════
+function genBillPDF(bid, rid, bn){
+  var b=fB(bid), r=fR(bid,rid); if(!r) return;
+  var t=getT(rid), m=curM(), ml=fmt(m);
+  var date=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+  var inv='INV-'+rid.slice(1,6).toUpperCase()+'-'+m.replace('-','');
+  var total=0, rows='';
+  r.meters.forEach(function(mt){
+    var prev=parseFloat(mt.last)||0, curr=parseFloat(mt.curr)||0, diff=Math.max(0,curr-prev), bill=diff*(parseFloat(mt.rate)||0);
+    total+=bill;
+    var icons={'water':'💧','solar':'☀️','electricity':'⚡','gas':'🔥'};
+    var ik=Object.keys(icons).find(function(k){return mt.name.toLowerCase().includes(k);});
+    rows+='<tr style="border-bottom:1px solid #f1f5f9"><td style="padding:11px 13px"><div style="display:flex;align-items:center;gap:8px"><span style="font-size:18px">'+(ik?icons[ik]:'🔢')+'</span><div><div style="font-weight:700;font-size:13px;color:#1e293b">'+mt.name+'</div><div style="font-size:10px;color:#94a3b8">per '+mt.unit+' @ ₹'+mt.rate+'</div></div></div></td><td style="text-align:center;padding:11px 7px;color:#475569">'+prev+'</td><td style="text-align:center;padding:11px 7px;color:#475569">'+curr+'</td><td style="text-align:center;padding:11px 7px;font-weight:700;color:#0f4c81">'+diff+' '+mt.unit+'</td><td style="text-align:right;padding:11px 13px;font-weight:700;color:#0f6b3a;font-size:14px">₹'+bill.toFixed(2)+'</td></tr>';
+  });
+  var ps=(t.ps&&t.ps[m])||'unpaid', paid=ps==='paid';
+  var w=window.open('','_blank');
+  if(!w){ toast('⚠️ Please allow popups to open PDF'); return; }
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bill – Room '+r.name+'</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:"Segoe UI",Arial,sans-serif;background:#f8fafc}.page{max-width:460px;margin:0 auto;background:#fff}.hdr{background:linear-gradient(135deg,#0f2744,#1e4d8c);padding:22px 20px 18px;color:#fff}.ht{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}.brand{font-size:18px;font-weight:800}.brand b{color:#60a5fa}.inv{background:rgba(255,255,255,.15);border-radius:5px;padding:3px 8px;font-size:10px;font-weight:700;color:#93c5fd}.rno{font-size:24px;font-weight:800;margin-bottom:3px}.bln{font-size:12px;color:#93c5fd}.sb{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:'+(paid?'#dcfce7':'#fef2f2')+';border-bottom:1px solid '+(paid?'#bbf7d0':'#fecaca')+'}.sp{display:flex;align-items:center;gap:5px;font-weight:800;font-size:13px;color:'+(paid?'#166534':'#991b1b')+'}.sd{width:7px;height:7px;border-radius:50%;background:'+(paid?'#22c55e':'#ef4444')+'}.info{padding:14px 20px 0;display:grid;grid-template-columns:1fr 1fr;gap:9px}.ib{background:#f8fafc;border-radius:8px;padding:10px 12px;border:1px solid #e2e8f0}.il{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#94a3b8;margin-bottom:3px}.iv{font-size:13px;font-weight:700;color:#1e293b}.is{font-size:9px;color:#94a3b8;margin-top:1px}.ts{padding:14px 20px 0}.tl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#94a3b8;margin-bottom:7px}.tbl{width:100%;border-collapse:collapse;border-radius:9px;overflow:hidden;border:1px solid #e2e8f0}.tbl thead tr{background:#f1f5f9}.tbl thead th{padding:7px 6px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#64748b}.tbl thead th:first-child{text-align:left;padding-left:12px}.tbl thead th:last-child{text-align:right;padding-right:12px}.totbox{margin:14px 20px 0;background:linear-gradient(135deg,#0f2744,#1e4d8c);border-radius:11px;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;color:#fff}.totamt{font-size:26px;font-weight:800;letter-spacing:-1px}.totm{font-size:11px;color:#60a5fa;margin-top:2px}.note{margin:12px 20px 0;border-radius:8px;padding:10px 12px;display:flex;gap:8px}.nti{font-size:16px;flex-shrink:0}.ntx{font-size:11px;line-height:1.5}.ft{margin:14px 20px 22px;text-align:center;border-top:1px solid #f1f5f9;padding-top:9px;font-size:10px;color:#94a3b8}@media print{body{background:#fff}.page{max-width:100%}}</style></head><body><div class="page"><div class="hdr"><div class="ht"><div class="brand">⚡ Utility<b>Bills</b></div><div class="inv">'+inv+'</div></div><div class="rno">Room '+r.name+'</div><div class="bln">🏢 '+bn+'</div></div><div class="sb"><div class="sp"><div class="sd"></div>'+(paid?'✓ PAID':'⚠ PAYMENT PENDING')+'</div><div style="font-size:11px;color:#64748b">📅 '+date+'</div></div><div class="info"><div class="ib"><div class="il">👤 Tenant</div><div class="iv">'+(t.name||'Tenant')+'</div><div class="is">Room '+r.name+'</div></div><div class="ib"><div class="il">📅 Period</div><div class="iv">'+ml+'</div><div class="is">Monthly Bill</div></div><div class="ib"><div class="il">🏢 Building</div><div class="iv">'+bn+'</div></div><div class="ib"><div class="il">🔢 Meters</div><div class="iv">'+r.meters.length+'</div><div class="is">'+r.meters.map(function(m2){return m2.name;}).join(', ')+'</div></div></div><div class="ts"><div class="tl">Meter Breakdown</div><table class="tbl"><thead><tr><th>Meter</th><th>Prev</th><th>Curr</th><th>Used</th><th>Amount</th></tr></thead><tbody>'+(rows||'<tr><td colspan="5" style="padding:14px;text-align:center;color:#94a3b8;font-size:12px">No meters</td></tr>')+'</tbody></table></div><div class="totbox"><div><div style="font-size:12px;color:#93c5fd;font-weight:600;margin-bottom:2px">Total Amount Due</div><div class="totamt">₹'+total.toFixed(2)+'</div><div class="totm">'+ml+'</div></div><div style="font-size:34px;opacity:.25">'+(paid?'✅':'💳')+'</div></div>'+(paid?'<div class="note" style="background:#f0fdf4;border:1px solid #bbf7d0"><div class="nti">✅</div><div class="ntx" style="color:#166534">Payment received for <b>'+ml+'</b>. Thank you!</div></div>':'<div class="note" style="background:#fffbeb;border:1px solid #fde68a"><div class="nti">💡</div><div class="ntx" style="color:#92400e">Please pay <b>₹'+total.toFixed(2)+'</b> for <b>'+ml+'</b>.</div></div>')+'<div class="ft">Generated by UtilityBills · '+date+'<br><span style="color:#cbd5e1;font-size:9px">'+inv+'</span></div></div></body></html>');
+  w.document.close(); w.focus();
+  setTimeout(function(){ w.print(); }, 600);
+  toast('📄 Bill for Room '+r.name+' ready! Save as PDF → share on WhatsApp');
+}
+
+// ═══════════════════════════════
+//  EXCEL EXPORT
+// ═══════════════════════════════
+function doExcel(){
+  if(typeof XLSX==='undefined'){
+    var s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+    s.onload=doExcel; document.head.appendChild(s); toast('⏳ Loading Excel library…'); return;
+  }
+  var wb=XLSX.utils.book_new(), ms=allMs();
+  function H(v,bg){ return{v:v,t:'s',s:{font:{bold:true,color:{rgb:'FFFFFF'},sz:10},fill:{fgColor:{rgb:bg||'1F3A5F'}},alignment:{horizontal:'center'}}}; }
+  function T(v){ return{v:v||'',t:'s',s:{font:{sz:10}}}; }
+  function M(v){ return{v:parseFloat(v)||0,t:'n',s:{numFmt:'#,##0.00',font:{color:{rgb:'166534'},sz:10},alignment:{horizontal:'right'}}}; }
+  function ST(v){ var p=v==='paid'; return{v:p?'✓ PAID':'✗ UNPAID',t:'s',s:{font:{bold:true,color:{rgb:p?'166534':'991B1B'},sz:10},fill:{fgColor:{rgb:p?'DCFCE7':'FEE2E2'}},alignment:{horizontal:'center'}}}; }
+  var sr=[[H('UTILITY BILLS SUMMARY','0F2744'),'','','','',''],[''],
+    [H('Month'),H('Total Bill (₹)'),H('Total Usage'),H('Buildings'),H('Rooms'),H('Paid'),H('Unpaid')]];
+  var gt=0;
+  ms.forEach(function(m){ var sv=getMS(m); if(!sv) return; var tb=0,tu=0,rm=0,pd=0,up=0;
+    sv.buildings.forEach(function(b){ b.rooms.forEach(function(r){ rm++; r.meters.forEach(function(mt){ var d=Math.max(0,(parseFloat(mt.curr)||0)-(parseFloat(mt.last)||0)); tb+=d*(parseFloat(mt.rate)||0); tu+=d; });
+    var ps=(TD[r.id]&&TD[r.id].ps&&TD[r.id].ps[m])||'unpaid'; if(ps==='paid')pd++;else up++; }); });
+    gt+=tb; sr.push([T(fmt(m)),M(tb),{v:tu,t:'n'},{v:sv.buildings.length,t:'n'},{v:rm,t:'n'},{v:pd,t:'n'},{v:up,t:'n'}]); });
+  sr.push(['']); sr.push([H('GRAND TOTAL','0A4B2A'),M(gt)]);
+  var ws1=XLSX.utils.aoa_to_sheet(sr); ws1['!cols']=[{wch:22},{wch:14},{wch:12},{wch:12},{wch:8},{wch:8},{wch:9}];
+  XLSX.utils.book_append_sheet(wb,ws1,'Summary');
+  var br=[[H('MONTHLY BILLS DETAIL','0F2744'),'','','','','','','','',''],[''],
+    [H('Month'),H('Building'),H('Room'),H('Tenant'),H('Meter'),H('Last Reading'),H('Current Reading'),H('Used'),H('Rate'),H('Bill (₹)'),H('Status')]];
+  ms.forEach(function(m){ var sv=getMS(m); if(!sv) return;
+    sv.buildings.forEach(function(b){ b.rooms.forEach(function(r){ var ti=TD[r.id]||{},ps=(ti.ps&&ti.ps[m])||'unpaid';
+      if(!r.meters.length){ br.push([T(fmt(m)),T(b.name),T(r.name),T(ti.name||''),T('—'),{v:0,t:'n'},{v:0,t:'n'},{v:0,t:'n'},{v:0,t:'n'},M(0),ST(ps)]); }
+      else{ r.meters.forEach(function(mt,mi){ var pr=parseFloat(mt.last)||0,cu=parseFloat(mt.curr)||0,df=Math.max(0,cu-pr),bl=df*(parseFloat(mt.rate)||0);
+        br.push([mi===0?T(fmt(m)):T(''),mi===0?T(b.name):T(''),mi===0?T(r.name):T(''),mi===0?T(ti.name||''):T(''),T(mt.name+' ('+mt.unit+')'),{v:pr,t:'n'},{v:cu,t:'n'},{v:df,t:'n'},{v:parseFloat(mt.rate)||0,t:'n'},M(bl),mi===0?ST(ps):T('')]); }); }
+    }); }); br.push([]); });
+  var ws2=XLSX.utils.aoa_to_sheet(br); ws2['!cols']=[{wch:18},{wch:14},{wch:10},{wch:18},{wch:14},{wch:12},{wch:14},{wch:8},{wch:8},{wch:12},{wch:10}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Monthly Bills');
+  var th=[H('Building'),H('Room'),H('Tenant')]; ms.forEach(function(m){th.push(H(fmts(m)));}); th.push(H('Paid (₹)'),H('Pending (₹)'));
+  var tr2=[[H('TENANT PAYMENT HISTORY','0F2744')],[''],[''],th];
+  S.buildings.forEach(function(b){ b.rooms.forEach(function(r){ var ti=TD[r.id]||{},row=[T(b.name),T(r.name),T(ti.name||'')],tp=0,tup=0;
+    ms.forEach(function(m){ var ps=(ti.ps&&ti.ps[m])||'',sv=getMS(m),bill=0;
+      if(sv){ var sb=sv.buildings.find(function(bb){return bb.id===b.id;}); if(sb){ var sr=sb.rooms.find(function(rr){return rr.id===r.id;}); if(sr) bill=sr.meters.reduce(function(s,mt){var d=Math.max(0,(parseFloat(mt.curr)||0)-(parseFloat(mt.last)||0));return s+d*(parseFloat(mt.rate)||0);},0); } }
+      if(ps==='paid'){tp+=bill;row.push(ST('paid'));}else if(bill>0){tup+=bill;row.push(ST('unpaid'));}else row.push(T('—')); });
+    row.push(M(tp),M(tup)); tr2.push(row); }); });
+  var ws3=XLSX.utils.aoa_to_sheet(tr2); var tc2=[{wch:14},{wch:10},{wch:18}]; ms.forEach(function(){tc2.push({wch:11});}); tc2.push({wch:12},{wch:12}); ws3['!cols']=tc2;
+  XLSX.utils.book_append_sheet(wb,ws3,'Tenant History');
+  XLSX.writeFile(wb,'UtilityBills_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  toast('✅ Excel file downloaded!');
+}
+
+// ═══════════════════════════════
+//  PDF EXPORT (All months)
+// ═══════════════════════════════
+function doPDF(){
+  var ms=allMs(); if(!ms.length){ toast('⚠️ No saved data to export'); return; }
+  var now2=new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'long',year:'numeric'});
+  var html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Utility Bills Export</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:11px;color:#000;background:#fff}.cov{padding:34px;text-align:center;page-break-after:always}.cov h1{font-size:22px;color:#1e3a5f}.ms{padding:16px 18px;page-break-after:always}.mt{background:#1e3a5f;color:#fff;padding:7px 13px;font-size:12px;font-weight:bold}.sr{display:flex;gap:7px;margin:9px 0}.sb2{flex:1;border:1px solid #ddd;border-radius:4px;padding:7px;text-align:center}.v2{font-size:14px;font-weight:bold;color:#1e3a5f}.l2{font-size:9px;color:#666}table{width:100%;border-collapse:collapse;margin-bottom:11px;font-size:10px}th{background:#1e3a5f;color:#fff;padding:5px 6px;text-align:left}td{padding:4px 6px;border-bottom:1px solid #eee}tr:nth-child(even) td{background:#f8fafc}.paid{background:#dcfce7;color:#166534;font-weight:bold;padding:1px 5px;border-radius:3px;font-size:9px}.unpaid{background:#fee2e2;color:#991b1b;font-weight:bold;padding:1px 5px;border-radius:3px;font-size:9px}.ra{text-align:right;font-weight:bold;color:#166534}.ft2{font-size:9px;color:#aaa;text-align:center;border-top:1px solid #eee;padding:4px}@media print{.ms{page-break-after:always}}</style></head><body>';
+  html+='<div class="cov"><h1>⚡ Utility Bills Report</h1><p>'+now2+' · '+ms.length+' months</p></div>';
+  ms.forEach(function(m){ var sv=getMS(m); if(!sv) return; var tb=0,tu=0,pc=0,uc=0;
+    sv.buildings.forEach(function(b){ b.rooms.forEach(function(r){ r.meters.forEach(function(mt){ var d=Math.max(0,(parseFloat(mt.curr)||0)-(parseFloat(mt.last)||0)); tb+=d*(parseFloat(mt.rate)||0); tu+=d; }); var ps=(TD[r.id]&&TD[r.id].ps&&TD[r.id].ps[m])||'unpaid'; if(ps==='paid')pc++;else uc++; }); });
+    html+='<div class="ms"><div class="mt">📅 '+fmt(m)+'</div><div class="sr"><div class="sb2"><div class="v2">₹'+tb.toFixed(2)+'</div><div class="l2">Total Bill</div></div><div class="sb2"><div class="v2">'+tu+'</div><div class="l2">Usage</div></div><div class="sb2"><div class="v2" style="color:#166534">'+pc+'</div><div class="l2">Paid</div></div><div class="sb2"><div class="v2" style="color:#991b1b">'+uc+'</div><div class="l2">Unpaid</div></div></div>';
+    sv.buildings.forEach(function(b){
+      html+='<div style="font-weight:bold;font-size:10px;color:#555;margin:7px 0 2px">🏢 '+b.name+'</div>';
+      html+='<table><thead><tr><th>Room</th><th>Tenant</th><th>Meter</th><th>Last</th><th>Curr</th><th>Used</th><th>Rate</th><th class="ra">Bill</th><th>Status</th></tr></thead><tbody>';
+      b.rooms.forEach(function(r){ var ti=TD[r.id]||{},ps=(ti.ps&&ti.ps[m])||'unpaid';
+        if(!r.meters.length){ html+='<tr><td>'+r.name+'</td><td>'+(ti.name||'—')+'</td><td colspan="5" style="color:#aaa">No meters</td><td>₹0.00</td><td><span class="'+ps+'">'+(ps==='paid'?'✓ PAID':'✗ UNPAID')+'</span></td></tr>'; }
+        else{ r.meters.forEach(function(mt,mi){ var pr=parseFloat(mt.last)||0,cu=parseFloat(mt.curr)||0,df=Math.max(0,cu-pr),bl=df*(parseFloat(mt.rate)||0);
+          html+='<tr>'+(mi===0?'<td rowspan="'+r.meters.length+'">'+r.name+'</td><td rowspan="'+r.meters.length+'">'+(ti.name||'—')+'</td>':'')+'<td>'+mt.name+'</td><td>'+pr+'</td><td>'+cu+'</td><td>'+df+' '+mt.unit+'</td><td>₹'+mt.rate+'</td><td class="ra">₹'+bl.toFixed(2)+'</td>'+(mi===0?'<td rowspan="'+r.meters.length+'" style="text-align:center;vertical-align:middle"><span class="'+ps+'">'+(ps==='paid'?'✓ PAID':'✗ UNPAID')+'</span></td>':'')+'</tr>'; }); }
+      });
+      html+='</tbody></table>';
+    });
+    html+='<div class="ft2">UtilityBills · '+fmt(m)+'</div></div>';
+  });
+  html+='</body></html>';
+  var w=window.open('','_blank');
+  if(!w){ toast('⚠️ Please allow popups'); return; }
+  w.document.write(html); w.document.close(); w.focus();
+  setTimeout(function(){ w.print(); }, 700);
+  toast('📄 All months PDF ready — Save as PDF');
+}
+
+// ═══════════════════════════════
+//  FIREBASE SYNC (background)
+// ═══════════════════════════════
+
+
+// ═══════════════════════════════
+//  INIT — runs immediately
+// ═══════════════════════════════
+(function(){
+  // Load tenant data
+  var td = localStorage.getItem('ubt');
+  if(td){ try{ TD = JSON.parse(td); } catch(e){} }
+
+  // Set current month
+  var now2 = new Date();
+  var cm = now2.getFullYear() + '-' + String(now2.getMonth()+1).padStart(2,'0');
+  ge('MP').value = cm;
+  lastM = cm;
+
+  // Load structure (buildings/rooms) - always present
+  var stSv = localStorage.getItem('ubm_struct');
+  if(stSv){ try{ S = JSON.parse(stSv); }catch(e){} }
+  // Load readings for current month
+  var rdSv = localStorage.getItem('ubm_r_'+cm);
+  var readings = rdSv ? JSON.parse(rdSv) : {};
+  S.buildings.forEach(function(b){ b.rooms.forEach(function(r){ r.meters.forEach(function(mt){
+    var rd = readings[r.id] && readings[r.id][mt.id];
+    mt.last = rd ? rd.last : '';
+    mt.curr = rd ? rd.curr : '';
+  });});});
+  render();
+
+})();
+</script>
+
+<!-- PWA Install Banner -->
+<div id="installBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;background:#1f6feb;color:#fff;padding:12px 16px;z-index:999;flex-direction:row;align-items:center;justify-content:space-between;gap:10px;box-shadow:0 -4px 20px rgba(0,0,0,.4)">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div style="font-size:1.5rem">⚡</div>
+    <div>
+      <div style="font-weight:700;font-size:.88rem">Install UtilityBills App</div>
+      <div style="font-size:.72rem;opacity:.85">Add to home screen for quick access</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;flex-shrink:0">
+    <button onclick="document.getElementById('installBanner').style.display='none'" style="background:rgba(255,255,255,.2);border:none;color:#fff;padding:6px 12px;border-radius:6px;font-size:.76rem;cursor:pointer;font-family:inherit">Later</button>
+    <button id="installBtn" style="background:#fff;border:none;color:#1f6feb;padding:6px 14px;border-radius:6px;font-size:.76rem;font-weight:700;cursor:pointer;font-family:inherit">Install</button>
+  </div>
+</div>
+
+<script>
+// ── SERVICE WORKER ─────────────────────────────
+if('serviceWorker' in navigator){
+  // Inline service worker as blob
+  var swCode = `
+const CACHE = 'ubills-v1';
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(cache => cache.addAll(['/'])));
+  self.skipWaiting();
+});
+self.addEventListener('activate', e => {
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));
+  self.clients.claim();
+});
+self.addEventListener('fetch', e => {
+  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(res => {
+    var clone = res.clone();
+    caches.open(CACHE).then(cache => cache.put(e.request, clone));
+    return res;
+  }).catch(() => caches.match('/'))));
+});
+`;
+  var blob = new Blob([swCode], {type:'application/javascript'});
+  var swUrl = URL.createObjectURL(blob);
+  navigator.serviceWorker.register(swUrl).catch(function(){});
+}
+
+// ── PWA INSTALL PROMPT ──────────────────────────
+var deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e){
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('installBanner').style.display = 'flex';
+});
+
+document.getElementById('installBtn').addEventListener('click', function(){
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(function(){
+      deferredPrompt = null;
+      document.getElementById('installBanner').style.display = 'none';
+    });
+  }
+});
+
+window.addEventListener('appinstalled', function(){
+  document.getElementById('installBanner').style.display = 'none';
+});
+</script>
+</body>
+</html>
