@@ -415,6 +415,8 @@ function saveM(m){
     readings[r.id][mt.id]={last:mt.last||'',curr:mt.curr||''};
   });});});
   localStorage.setItem('ubm_r_'+m, JSON.stringify(readings));
+  // Sync to cloud for other device
+  pushToCloud(m);
 }
 
 function loadM(m){
@@ -1016,40 +1018,23 @@ function doPDF(){
 </div>
 
 <script>
-// ── SERVICE WORKER ─────────────────────────────
+// ── SERVICE WORKER (proper sw.js file) ──────────
 if('serviceWorker' in navigator){
-  // Inline service worker as blob
-  var swCode = `
-const CACHE = 'ubills-v1';
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(cache => cache.addAll(['/'])));
-  self.skipWaiting();
-});
-self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));
-  self.clients.claim();
-});
-self.addEventListener('fetch', e => {
-  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(res => {
-    var clone = res.clone();
-    caches.open(CACHE).then(cache => cache.put(e.request, clone));
-    return res;
-  }).catch(() => caches.match('/'))));
-});
-`;
-  var blob = new Blob([swCode], {type:'application/javascript'});
-  var swUrl = URL.createObjectURL(blob);
-  navigator.serviceWorker.register(swUrl).catch(function(){});
+  navigator.serviceWorker.register('/utilitybills/sw.js')
+    .then(function(){ console.log('SW registered'); })
+    .catch(function(){ 
+      // fallback for local
+      navigator.serviceWorker.register('sw.js').catch(function(){});
+    });
 }
 
-// ── PWA INSTALL PROMPT ──────────────────────────
+// ── PWA INSTALL PROMPT ───────────────────────────
 var deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', function(e){
   e.preventDefault();
   deferredPrompt = e;
   document.getElementById('installBanner').style.display = 'flex';
 });
-
 document.getElementById('installBtn').addEventListener('click', function(){
   if(deferredPrompt){
     deferredPrompt.prompt();
@@ -1059,10 +1044,107 @@ document.getElementById('installBtn').addEventListener('click', function(){
     });
   }
 });
-
 window.addEventListener('appinstalled', function(){
   document.getElementById('installBanner').style.display = 'none';
+  alert('✅ App installed! Open from your home screen anytime.');
 });
+
+// ── FIREBASE SYNC (background, non-blocking) ─────
+var FDB = null;
+function initFirebase(){
+  function loadJS(src, cb){
+    var s = document.createElement('script');
+    s.src = src; s.async = true; s.onload = cb;
+    s.onerror = function(){ console.log('Firebase offline'); };
+    document.head.appendChild(s);
+  }
+  loadJS('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js', function(){
+    loadJS('https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js', function(){
+      try{
+        firebase.initializeApp({
+          apiKey:"AIzaSyCm3Pi7ipBCMykrB3mxcUYoCWxFnlSZgSU",
+          authDomain:"monumental-semolina-215edd.firebaseapp.com",
+          databaseURL:"https://monumental-semolina-215edd-default-rtdb.firebaseio.com",
+          projectId:"monumental-semolina-215edd",
+          storageBucket:"monumental-semolina-215edd.appspot.com",
+          messagingSenderId:"447104436677",
+          appId:"1:447104436677:web:f63510d825512a9496a3ac"
+        });
+        FDB = firebase.database();
+        showSyncStatus('🔄 Syncing...');
+
+        // Listen for structure changes from OTHER device
+        var firstLoad = true;
+        FDB.ref('ub/struct').on('value', function(snap){
+          var v = snap.val();
+          if(firstLoad){
+            firstLoad = false;
+            // Only use cloud if local is empty
+            var localStruct = localStorage.getItem('ubm_struct');
+            if(!localStruct && v){
+              localStorage.setItem('ubm_struct', JSON.stringify(v));
+              S = v; render();
+              showSyncStatus('✅ Synced');
+            } else if(localStruct){
+              // Push local to cloud
+              FDB.ref('ub/struct').set(JSON.parse(localStruct)).catch(function(){});
+              showSyncStatus('✅ Live');
+            }
+            return;
+          }
+          // Subsequent updates = from other device
+          if(v){ 
+            localStorage.setItem('ubm_struct', JSON.stringify(v));
+            S = v; render(); 
+            showSyncStatus('✅ Synced from brother');
+            toast('🔄 Data synced from other device!');
+          }
+        });
+
+        // Listen for current month readings from other device
+        FDB.ref('ub/r/'+curM()).on('value', function(snap){
+          var v = snap.val(); if(!v) return;
+          localStorage.setItem('ubm_r_'+curM(), JSON.stringify(v));
+          // Apply readings
+          S.buildings.forEach(function(b){ b.rooms.forEach(function(r){ r.meters.forEach(function(mt){
+            var rd = v[r.id] && v[r.id][mt.id];
+            if(rd){ mt.last=rd.last||''; mt.curr=rd.curr||''; }
+          });});});
+          render();
+        });
+
+        // Listen for tenant data
+        FDB.ref('ub/td').on('value', function(snap){
+          var v = snap.val(); if(!v) return;
+          TD = v; renderTenants();
+        });
+
+      } catch(e){ showSyncStatus('📴 Offline'); }
+    });
+  });
+}
+
+function pushToCloud(m){
+  if(!FDB) return;
+  // Push structure
+  var stSv = localStorage.getItem('ubm_struct');
+  if(stSv) FDB.ref('ub/struct').set(JSON.parse(stSv)).catch(function(){});
+  // Push readings
+  var rdSv = localStorage.getItem('ubm_r_'+m);
+  if(rdSv) FDB.ref('ub/r/'+m).set(JSON.parse(rdSv)).catch(function(){});
+  // Push tenant data
+  FDB.ref('ub/td').set(TD).catch(function(){});
+  showSyncStatus('✅ Saved & Synced');
+}
+
+function showSyncStatus(msg){
+  var el = document.getElementById('savedTxt');
+  if(el){ el.textContent = msg; el.classList.add('on'); 
+    setTimeout(function(){ el.classList.remove('on'); }, 2000); }
+}
+
+// Start Firebase after 2 seconds (never blocks UI)
+setTimeout(initFirebase, 2000);
 </script>
 </body>
 </html>
