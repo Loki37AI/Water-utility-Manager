@@ -391,11 +391,14 @@ function onMonthChange(v){
 //  SAVE / LOAD
 // ═══════════════════════════════
 function autoSave(){
-  // Save immediately — no delay
-  saveM(curM());
+  var m = ge('MP').value;
+  if(!m) return;
+  saveM(m);
+  var count = S.buildings.reduce(function(s,b){ return s+b.rooms.length; }, 0);
   var t = ge('savedTxt');
+  t.textContent = '✅ Saved ' + S.buildings.length + ' buildings, ' + count + ' rooms';
   t.classList.add('on');
-  setTimeout(function(){ t.classList.remove('on'); }, 1500);
+  setTimeout(function(){ t.classList.remove('on'); }, 2500);
 }
 
 function saveM(m){
@@ -1029,6 +1032,13 @@ function doPDF(){
     localStorage.setItem('ubm_r_'+m, JSON.stringify(readings));
   }
   window.addEventListener('beforeunload', emergencySave);
+  // Show data count on load so user knows data loaded
+  var loadedCount = S.buildings.reduce(function(s,b){ return s+b.rooms.length; }, 0);
+  if(S.buildings.length > 0){
+    setTimeout(function(){
+      toast('✅ Loaded: ' + S.buildings.length + ' buildings, ' + loadedCount + ' rooms');
+    }, 500);
+  }
   window.addEventListener('pagehide', emergencySave);
   document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='hidden') emergencySave(); });
   // Auto-save every 5 seconds
@@ -1138,15 +1148,11 @@ function doPDF(){
 
 <script>
 // ── SERVICE WORKER ──────────────────────────────
+// Unregister any old service workers that may cache broken versions
 if('serviceWorker' in navigator){
-  // Try GitHub Pages path first, then relative
-  var swPath = location.pathname.includes('github.io') ? 
-    '/Water-utility-Manager/sw.js' : 'sw.js';
-  navigator.serviceWorker.register(swPath)
-    .then(function(reg){ console.log('SW ok:', reg.scope); })
-    .catch(function(e){ 
-      navigator.serviceWorker.register('sw.js').catch(function(){});
-    });
+  navigator.serviceWorker.getRegistrations().then(function(regs){
+    regs.forEach(function(reg){ reg.unregister(); });
+  });
 }
 // ── PWA INSTALL PROMPT ───────────────────────────
 var deferredPrompt = null;
