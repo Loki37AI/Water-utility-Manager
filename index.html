@@ -382,6 +382,7 @@ function curM(){ return ge('MP').value; }
 function onMonthChange(v){
   if(lastM) saveM(lastM);
   lastM = v;
+  localStorage.setItem('ubm_month', v);  // SAVE selected month
   loadM(v);
   toast('📅 ' + fmt(v));
 }
@@ -399,7 +400,10 @@ function autoSave(){
 
 function saveM(m){
   if(!m) return;
-  // Save structure (buildings/rooms/meters) SEPARATELY - persists forever
+  // Save FULL state (structure + readings together) - most reliable
+  localStorage.setItem('ubm_full', JSON.stringify(S));
+  localStorage.setItem('ubm_month', m);
+  // Also save structure separately for new months
   var struct = { buildings: S.buildings.map(function(b){
     return { id:b.id, name:b.name, rooms: b.rooms.map(function(r){
       return { id:r.id, name:r.name, meters: r.meters.map(function(mt){
@@ -408,7 +412,7 @@ function saveM(m){
     })};
   })};
   localStorage.setItem('ubm_struct', JSON.stringify(struct));
-  // Save readings for this month separately
+  // Save readings for this month
   var readings = {};
   S.buildings.forEach(function(b){ b.rooms.forEach(function(r){ r.meters.forEach(function(mt){
     if(!readings[r.id]) readings[r.id]={};
@@ -978,23 +982,33 @@ function doPDF(){
   var td = localStorage.getItem('ubt');
   if(td){ try{ TD = JSON.parse(td); } catch(e){} }
 
-  // Set current month
+  // Restore saved month (or use current month)
   var now2 = new Date();
-  var cm = now2.getFullYear() + '-' + String(now2.getMonth()+1).padStart(2,'0');
+  var defaultM = now2.getFullYear() + '-' + String(now2.getMonth()+1).padStart(2,'0');
+  var cm = localStorage.getItem('ubm_month') || defaultM;
   ge('MP').value = cm;
   lastM = cm;
 
-  // Load structure (buildings/rooms) - always present
-  var stSv = localStorage.getItem('ubm_struct');
-  if(stSv){ try{ S = JSON.parse(stSv); }catch(e){} }
-  // Load readings for current month
+  // Load full saved state first
+  var fullSv = localStorage.getItem('ubm_full');
+  if(fullSv){ try{ S = JSON.parse(fullSv); }catch(e){} }
+  else {
+    // Fallback to struct + readings
+    var stSv = localStorage.getItem('ubm_struct');
+    if(stSv){ try{ S = JSON.parse(stSv); }catch(e){} }
+  }
+  // Apply readings for the selected month
   var rdSv = localStorage.getItem('ubm_r_'+cm);
-  var readings = rdSv ? JSON.parse(rdSv) : {};
-  S.buildings.forEach(function(b){ b.rooms.forEach(function(r){ r.meters.forEach(function(mt){
-    var rd = readings[r.id] && readings[r.id][mt.id];
-    mt.last = rd ? rd.last : '';
-    mt.curr = rd ? rd.curr : '';
-  });});});
+  if(rdSv){
+    try{
+      var readings = JSON.parse(rdSv);
+      S.buildings.forEach(function(b){ b.rooms.forEach(function(r){ r.meters.forEach(function(mt){
+        var rd = readings[r.id] && readings[r.id][mt.id];
+        mt.last = rd ? rd.last : '';
+        mt.curr = rd ? rd.curr : '';
+      });});});
+    }catch(e){}
+  }
   render();
 
 })();
@@ -1018,7 +1032,14 @@ function doPDF(){
 <script>
 // ── SERVICE WORKER ──────────────────────────────
 if('serviceWorker' in navigator){
-  navigator.serviceWorker.register('sw.js').catch(function(){});
+  // Try GitHub Pages path first, then relative
+  var swPath = location.pathname.includes('github.io') ? 
+    '/Water-utility-Manager/sw.js' : 'sw.js';
+  navigator.serviceWorker.register(swPath)
+    .then(function(reg){ console.log('SW ok:', reg.scope); })
+    .catch(function(e){ 
+      navigator.serviceWorker.register('sw.js').catch(function(){});
+    });
 }
 // ── PWA INSTALL PROMPT ───────────────────────────
 var deferredPrompt = null;
