@@ -1011,6 +1011,113 @@ function doPDF(){
   }
   render();
 
+  // ── EMERGENCY SAVE GUARDS ──────────────────────
+  // Save when user refreshes, closes, or switches app
+  function emergencySave(){
+    var m = ge('MP').value;
+    if(!m) return;
+    localStorage.setItem('ubm_month', m);
+    localStorage.setItem('ubm_full', JSON.stringify(S));
+    localStorage.setItem('ubt', JSON.stringify(TD));
+    localStorage.setItem('ubm_ts', Date.now().toString());
+    // Save readings
+    var readings={};
+    S.buildings.forEach(function(b){b.rooms.forEach(function(r){r.meters.forEach(function(mt){
+      if(!readings[r.id])readings[r.id]={};
+      readings[r.id][mt.id]={last:mt.last||'',curr:mt.curr||''};
+    });});});
+    localStorage.setItem('ubm_r_'+m, JSON.stringify(readings));
+  }
+  window.addEventListener('beforeunload', emergencySave);
+  window.addEventListener('pagehide', emergencySave);
+  document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='hidden') emergencySave(); });
+  // Auto-save every 5 seconds
+  setInterval(emergencySave, 5000);
+
+  // ── FIREBASE SYNC ──────────────────────────────
+  // Load Firebase after page renders - never blocks UI
+  setTimeout(function(){
+    function loadJS(src,cb){ var s=document.createElement('script');s.src=src;s.async=true;s.onload=cb;s.onerror=function(){console.log('No internet - offline mode');};document.head.appendChild(s); }
+    loadJS('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js',function(){
+      loadJS('https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js',function(){
+        try{
+          if(firebase.apps.length===0){
+            firebase.initializeApp({
+              apiKey:"AIzaSyCm3Pi7ipBCMykrB3mxcUYoCWxFnlSZgSU",
+              authDomain:"monumental-semolina-215edd.firebaseapp.com",
+              databaseURL:"https://monumental-semolina-215edd-default-rtdb.firebaseio.com",
+              projectId:"monumental-semolina-215edd",
+              storageBucket:"monumental-semolina-215edd.appspot.com",
+              messagingSenderId:"447104436677",
+              appId:"1:447104436677:web:f63510d825512a9496a3ac"
+            });
+          }
+          var db = firebase.database();
+          var isSyncing = false;
+
+          // PUSH local data to Firebase (called after every save)
+          window.pushCloud = function(){
+            if(!db||isSyncing) return;
+            var payload = {
+              struct: localStorage.getItem('ubm_struct'),
+              full:   localStorage.getItem('ubm_full'),
+              td:     localStorage.getItem('ubt'),
+              month:  localStorage.getItem('ubm_month'),
+              ts:     Date.now()
+            };
+            // save all monthly readings
+            var keys=[];
+            for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&k.startsWith('ubm_r_'))keys.push(k);}
+            keys.forEach(function(k){ payload[k.replace('ubm_r_','r_')]=localStorage.getItem(k); });
+            db.ref('ub2/data').set(payload).catch(function(){});
+          };
+
+          // LISTEN for changes from other device
+          db.ref('ub2/data').on('value', function(snap){
+            var v = snap.val();
+            if(!v || !v.ts) return;
+            // Only pull if other device is newer
+            var localTs = parseInt(localStorage.getItem('ubm_ts')||'0');
+            if(v.ts <= localTs) return;  // our data is newer, ignore
+            
+            isSyncing = true;
+            // Restore all data from cloud
+            if(v.struct) localStorage.setItem('ubm_struct', v.struct);
+            if(v.full)   localStorage.setItem('ubm_full',   v.full);
+            if(v.td)     localStorage.setItem('ubt',        v.td);
+            if(v.month)  localStorage.setItem('ubm_month',  v.month);
+            // Restore monthly readings
+            Object.keys(v).forEach(function(k){
+              if(k.startsWith('r_')) localStorage.setItem('ubm_'+k, v[k]);
+            });
+            localStorage.setItem('ubm_ts', v.ts);
+            
+            // Apply to current state
+            var fullSv = localStorage.getItem('ubm_full');
+            if(fullSv){ try{ S=JSON.parse(fullSv); }catch(e){} }
+            // Apply current month readings
+            var curMonth = ge('MP').value;
+            var rdSv = localStorage.getItem('ubm_r_'+curMonth);
+            if(rdSv){ try{
+              var rd=JSON.parse(rdSv);
+              S.buildings.forEach(function(b){b.rooms.forEach(function(r){r.meters.forEach(function(mt){
+                var x=rd[r.id]&&rd[r.id][mt.id];mt.last=x?x.last:'';mt.curr=x?x.curr:'';
+              });});});
+            }catch(e){} }
+            // Restore tenant data
+            var tdSv = localStorage.getItem('ubt');
+            if(tdSv){ try{ TD=JSON.parse(tdSv); }catch(e){} }
+            render(); renderTenants();
+            isSyncing = false;
+            toast('🔄 Synced from other device!');
+          });
+
+          toast('☁️ Online - live sync active');
+        }catch(e){ console.log('Firebase error:', e); }
+      });
+    });
+  }, 2000);
+
 })();
 </script>
 
