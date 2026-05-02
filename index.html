@@ -382,8 +382,10 @@ function curM(){ return ge('MP').value; }
 function onMonthChange(v){
   if(lastM) saveM(lastM);
   lastM = v;
-  localStorage.setItem('ubm_month', v);  // SAVE selected month
+  localStorage.setItem('ubm_month', v);
   loadM(v);
+  // Auto-fill last month readings if new month is empty
+  setTimeout(function(){ autoFillLastMonth(v); }, 100);
   toast('📅 ' + fmt(v));
 }
 
@@ -422,6 +424,9 @@ function saveM(m){
     readings[r.id][mt.id]={last:mt.last||'',curr:mt.curr||''};
   });});});
   localStorage.setItem('ubm_r_'+m, JSON.stringify(readings));
+  localStorage.setItem('ubm_ts', Date.now().toString());
+  // Push to cloud if Firebase is ready
+  if(typeof window.syncToCloud === 'function') window.syncToCloud();
 }
 
 function loadM(m){
@@ -473,18 +478,62 @@ function getMS(m){
   return st;
 }
 
-function copyLast(){
-  var m = curM(); if(!m){ toast('⚠️ Select a month'); return; }
+function getPrevMonthKey(m){
   var p = m.split('-').map(Number);
   var pm = p[1]===1?12:p[1]-1, py = p[1]===1?p[0]-1:p[0];
-  var pk = 'ubm_'+py+'-'+String(pm).padStart(2,'0');
-  var sv = localStorage.getItem(pk);
-  if(!sv){ toast('⚠️ No data for previous month'); return; }
+  return py+'-'+String(pm).padStart(2,'0');
+}
+
+function copyLast(){
+  var m = curM(); if(!m){ toast('⚠️ Select a month'); return; }
+  var prevKey = getPrevMonthKey(m);
+  // Try new format first (ubm_r_YYYY-MM)
+  var rdSv = localStorage.getItem('ubm_r_'+prevKey);
+  if(rdSv){
+    try{
+      var prevReadings = JSON.parse(rdSv);
+      // Copy curr → last, clear curr for each meter
+      S.buildings.forEach(function(b){ b.rooms.forEach(function(r){ r.meters.forEach(function(mt){
+        var rd = prevReadings[r.id] && prevReadings[r.id][mt.id];
+        mt.last = rd ? (rd.curr || rd.last || '') : '';
+        mt.curr = '';
+      });});});
+      render(); autoSave(); toast('✅ Last month readings copied as starting readings!');
+      return;
+    }catch(e){}
+  }
+  // Try old format fallback (ubm_YYYY-MM)
+  var oldSv = localStorage.getItem('ubm_'+prevKey);
+  if(oldSv){
+    try{
+      var ps = JSON.parse(oldSv);
+      ps.buildings.forEach(function(b){ b.rooms.forEach(function(r){ r.meters.forEach(function(mt){ mt.last=mt.curr; mt.curr=''; }); }); });
+      S = ps; render(); autoSave(); toast('✅ Last month readings copied!');
+      return;
+    }catch(e){}
+  }
+  toast('⚠️ No previous month data found. Enter readings manually.');
+}
+
+// Auto-copy last month when switching to a new empty month
+function autoFillLastMonth(m){
+  var rdSv = localStorage.getItem('ubm_r_'+m);
+  if(rdSv) return; // month already has data, don't auto-fill
+  var prevKey = getPrevMonthKey(m);
+  var prevRd = localStorage.getItem('ubm_r_'+prevKey);
+  if(!prevRd) return; // no previous data
   try{
-    var ps = JSON.parse(sv);
-    ps.buildings.forEach(function(b){ b.rooms.forEach(function(r){ r.meters.forEach(function(mt){ mt.last=mt.curr; mt.curr=''; }); }); });
-    S = ps; render(); autoSave(); toast('⬅ Last month readings loaded!');
-  } catch(e){ toast('⚠️ Error loading previous month'); }
+    var prevReadings = JSON.parse(prevRd);
+    var hasData = Object.keys(prevReadings).length > 0;
+    if(!hasData) return;
+    S.buildings.forEach(function(b){ b.rooms.forEach(function(r){ r.meters.forEach(function(mt){
+      var rd = prevReadings[r.id] && prevReadings[r.id][mt.id];
+      mt.last = rd ? (rd.curr || '') : '';
+      mt.curr = '';
+    });});});
+    render(); autoSave();
+    toast('✅ Last month final readings auto-loaded as starting readings!');
+  }catch(e){}
 }
 
 // ═══════════════════════════════
@@ -1045,13 +1094,18 @@ function doPDF(){
   setInterval(emergencySave, 5000);
 
   // ── FIREBASE SYNC ──────────────────────────────
-  // Load Firebase after page renders - never blocks UI
   setTimeout(function(){
-    function loadJS(src,cb){ var s=document.createElement('script');s.src=src;s.async=true;s.onload=cb;s.onerror=function(){console.log('No internet - offline mode');};document.head.appendChild(s); }
+    function loadJS(src,cb){
+      var s=document.createElement('script');
+      s.src=src; s.async=true;
+      s.onload=cb;
+      s.onerror=function(){ console.log('Offline'); };
+      document.head.appendChild(s);
+    }
     loadJS('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js',function(){
       loadJS('https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js',function(){
         try{
-          if(firebase.apps.length===0){
+          if(!firebase.apps.length){
             firebase.initializeApp({
               apiKey:"AIzaSyCm3Pi7ipBCMykrB3mxcUYoCWxFnlSZgSU",
               authDomain:"monumental-semolina-215edd.firebaseapp.com",
@@ -1063,71 +1117,89 @@ function doPDF(){
             });
           }
           var db = firebase.database();
-          var isSyncing = false;
+          var myId = localStorage.getItem('ubm_deviceId');
+          if(!myId){ myId='dev_'+Math.random().toString(36).substr(2,9); localStorage.setItem('ubm_deviceId',myId); }
 
-          // PUSH local data to Firebase (called after every save)
-          window.pushCloud = function(){
-            if(!db||isSyncing) return;
+          // ── PUSH to Firebase (called after every save) ──
+          window.syncToCloud = function(){
             var payload = {
-              struct: localStorage.getItem('ubm_struct'),
-              full:   localStorage.getItem('ubm_full'),
-              td:     localStorage.getItem('ubt'),
-              month:  localStorage.getItem('ubm_month'),
-              ts:     Date.now()
+              deviceId: myId,
+              ts: Date.now(),
+              full: JSON.stringify(S),
+              td: JSON.stringify(TD),
+              month: ge('MP').value
             };
-            // save all monthly readings
-            var keys=[];
-            for(var i=0;i<localStorage.length;i++){var k=localStorage.key(i);if(k&&k.startsWith('ubm_r_'))keys.push(k);}
-            keys.forEach(function(k){ payload[k.replace('ubm_r_','r_')]=localStorage.getItem(k); });
-            db.ref('ub2/data').set(payload).catch(function(){});
+            // save readings for all months
+            for(var i=0;i<localStorage.length;i++){
+              var k=localStorage.key(i);
+              if(k&&k.startsWith('ubm_r_')) payload[k]=localStorage.getItem(k);
+            }
+            db.ref('ub3').set(payload)
+              .then(function(){ toast('☁️ Synced to cloud!'); })
+              .catch(function(){ toast('📴 Saved locally only'); });
           };
 
-          // LISTEN for changes from other device
-          db.ref('ub2/data').on('value', function(snap){
+          // ── PULL from Firebase (on load) ──
+          db.ref('ub3').once('value', function(snap){
             var v = snap.val();
-            if(!v || !v.ts) return;
-            // Only pull if other device is newer
+            if(!v) return; // nothing in cloud yet
+            // If cloud is from ANOTHER device and is NEWER than our local data
             var localTs = parseInt(localStorage.getItem('ubm_ts')||'0');
-            if(v.ts <= localTs) return;  // our data is newer, ignore
-            
-            isSyncing = true;
-            // Restore all data from cloud
-            if(v.struct) localStorage.setItem('ubm_struct', v.struct);
-            if(v.full)   localStorage.setItem('ubm_full',   v.full);
-            if(v.td)     localStorage.setItem('ubt',        v.td);
-            if(v.month)  localStorage.setItem('ubm_month',  v.month);
-            // Restore monthly readings
-            Object.keys(v).forEach(function(k){
-              if(k.startsWith('r_')) localStorage.setItem('ubm_'+k, v[k]);
-            });
-            localStorage.setItem('ubm_ts', v.ts);
-            
-            // Apply to current state
-            var fullSv = localStorage.getItem('ubm_full');
-            if(fullSv){ try{ S=JSON.parse(fullSv); }catch(e){} }
-            // Apply current month readings
-            var curMonth = ge('MP').value;
-            var rdSv = localStorage.getItem('ubm_r_'+curMonth);
-            if(rdSv){ try{
-              var rd=JSON.parse(rdSv);
-              S.buildings.forEach(function(b){b.rooms.forEach(function(r){r.meters.forEach(function(mt){
-                var x=rd[r.id]&&rd[r.id][mt.id];mt.last=x?x.last:'';mt.curr=x?x.curr:'';
-              });});});
-            }catch(e){} }
-            // Restore tenant data
-            var tdSv = localStorage.getItem('ubt');
-            if(tdSv){ try{ TD=JSON.parse(tdSv); }catch(e){} }
-            render(); renderTenants();
-            isSyncing = false;
-            toast('🔄 Synced from other device!');
+            if(v.deviceId !== myId && v.ts > localTs){
+              // Pull cloud data
+              if(v.full){ try{ S=JSON.parse(v.full); }catch(e){} }
+              if(v.td){ try{ TD=JSON.parse(v.td); }catch(e){} }
+              if(v.month) ge('MP').value = v.month;
+              Object.keys(v).forEach(function(k){
+                if(k.startsWith('ubm_r_')) localStorage.setItem(k,v[k]);
+              });
+              localStorage.setItem('ubm_ts', v.ts);
+              localStorage.setItem('ubm_full', v.full||'');
+              localStorage.setItem('ubt', v.td||'');
+              render(); renderTenants();
+              toast('🔄 Data synced from other device!');
+            } else if(!S.buildings.length && v.full){
+              // We have no local data - use cloud data
+              try{ S=JSON.parse(v.full); }catch(e){}
+              if(v.td){ try{ TD=JSON.parse(v.td); }catch(e){} }
+              if(v.month) ge('MP').value = v.month;
+              Object.keys(v).forEach(function(k){
+                if(k.startsWith('ubm_r_')) localStorage.setItem(k,v[k]);
+              });
+              render(); renderTenants();
+              toast('🔄 Loaded from cloud!');
+            }
           });
 
-          toast('☁️ Online - live sync active');
-        }catch(e){ console.log('Firebase error:', e); }
+          // ── LISTEN for live changes from other device ──
+          db.ref('ub3/ts').on('value', function(snap){
+            var cloudTs = snap.val();
+            if(!cloudTs) return;
+            var localTs = parseInt(localStorage.getItem('ubm_ts')||'0');
+            if(cloudTs > localTs){
+              // Other device updated - pull latest
+              db.ref('ub3').once('value', function(snap2){
+                var v = snap2.val(); if(!v) return;
+                if(v.deviceId === myId) return; // our own update, ignore
+                if(v.full){ try{ S=JSON.parse(v.full); }catch(e){} }
+                if(v.td){ try{ TD=JSON.parse(v.td); }catch(e){} }
+                if(v.month){ ge('MP').value=v.month; localStorage.setItem('ubm_month',v.month); }
+                Object.keys(v).forEach(function(k){
+                  if(k.startsWith('ubm_r_')) localStorage.setItem(k,v[k]);
+                });
+                localStorage.setItem('ubm_ts', v.ts);
+                localStorage.setItem('ubm_full', v.full||'');
+                render(); renderTenants();
+                toast('🔄 Brother updated data!');
+              });
+            }
+          });
+
+          toast('✅ Connected - live sync on');
+        }catch(e){ console.log('FB error',e); }
       });
     });
-  }, 2000);
-
+  }, 1500);
 })();
 </script>
 
